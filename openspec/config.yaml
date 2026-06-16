@@ -1,0 +1,8 @@
+version: 1
+profile: core
+workflow:
+  - propose
+  - explore
+  - apply
+  - sync
+  - archive

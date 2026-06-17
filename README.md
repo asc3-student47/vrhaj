@@ -21,14 +21,26 @@ Use these commands in your AI tool chat to run the default OpenSpec flow:
 ### Repository structure
 
 ```text
+copilot-instructions.md
+docs/
+└── agent-chat-log.md
 openspec/
 ├── config.yaml
 ├── specs/
-│   └── fleet-tire-management/spec.md
+│   ├── spec-architecture.md
+│   ├── fleet-tire-management/spec.md
+│   ├── procurement-handoff/spec.md
+│   ├── tire-compliance/spec.md
+│   └── tire-recommendation/spec.md
 └── changes/
     └── introduce-openspec-flow/
         ├── proposal.md
         ├── design.md
         ├── tasks.md
         └── specs/process/spec.md
+pyproject.toml
+subsystem/
+├── budgeting-system/
+├── compliance-system/
+└── supplier-database/
 ```

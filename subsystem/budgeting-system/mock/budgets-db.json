@@ -1,0 +1,8 @@
+[
+  {
+    "cost_center_id": "CC-001",
+    "name": "Fleet Maintenance",
+    "allocated": 500000.00,
+    "remaining": 312450.00
+  }
+]

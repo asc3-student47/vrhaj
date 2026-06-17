@@ -81,10 +81,8 @@ Contract must be active to be considered. Preferred suppliers should be at the t
 
 Use subsystems/supplier-system/mock/suppliers-db.json as data model. Assume only one active contract per supplier exists.
 
-## 2026-06-17T10:58:55-05:00
+## 2026-06-17T11:04:55-05:00
 
-Export command
+Follow instructions in #prompt:opsx-propose.prompt.md with these arguments: implement-supplier-system
 
-## 2026-06-17T10:58:55-05:00
-
-Log user commands for this session
+Mark procurment-handoff as out of scope.

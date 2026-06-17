@@ -18,6 +18,7 @@ The design must support request-time filtering by SKU, required quantity, and re
 - Building production persistence or contract synchronization.
 - Solving multi-contract optimization across suppliers beyond simple ranking.
 - Automated purchase-order submission or supplier-side API integration.
+- Changes to procurement-handoff requirements or response contracts.
 
 ## Decisions
 

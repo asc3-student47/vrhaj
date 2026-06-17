@@ -10,7 +10,7 @@
 - [ ] 2.2 Implement eligibility checks for active contract date, sufficient quantity, and requested lead-time feasibility.
 - [ ] 2.3 Implement deterministic preferred-first result ordering and include explicit inclusion/exclusion reasons per evaluated contract.
 
-## 3. Integration and Validation
+## 3. Validation
 
 - [ ] 3.1 Add tests for eligible supplier matches and preferred-first ordering.
 - [ ] 3.2 Add tests for exclusion paths: expired contracts, insufficient quantity, and lead-time mismatch.

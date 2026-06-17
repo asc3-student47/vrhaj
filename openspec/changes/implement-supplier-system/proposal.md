@@ -15,10 +15,10 @@ The requisition workflow requires supplier matching after compliance, but the re
 - `supplier-system-lookup`: Lookup and rank suppliers from mock contract data using SKU, quantity, lead-time, and contract validity constraints.
 
 ### Modified Capabilities
-- `procurement-handoff`: Add requirement-level behavior that supplier search output is sourced from supplier-system matching and preserves preferred-first ordering semantics.
+- None. Procurement-handoff integration is explicitly out of scope for this change.
 
 ## Impact
 
 - Affected systems: new supplier subsystem under subsystem assets and its mock database usage.
-- Affected specs: new capability spec for supplier-system-lookup and delta updates for procurement-handoff search behavior.
+- Affected specs: new capability spec for supplier-system-lookup.
 - Affected tests: supplier matching scenarios for inclusion criteria, ordering, and no-match outcomes.

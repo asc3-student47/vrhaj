@@ -20,6 +20,105 @@ Key baked-in structural decisions:
 - Verbose/optional response behaviors are captured as contract expectations, not implemented logic.
 - Deterministic ordering and validation policies are captured as future acceptance constraints.
 
+## Proposed Directory Tree
+```text
+fleet-tire-manager/
+	pyproject.toml
+	README.md
+	docs/
+		agent-chat-log.md
+		explore-status-lifecycle.md
+	openspec/
+		config.yaml
+		specs/
+			spec-architecture.md
+			fleet-tire-management/spec.md
+			tire-compliance/spec.md
+			tire-recommendation/spec.md
+			procurement-handoff/spec.md
+			compliance-system-lookup/spec.md
+		changes/
+			introduce-openspec-flow/
+				proposal.md
+				design.md
+				tasks.md
+				specs/
+					process/spec.md
+			archive/
+				2026-06-16-implement-compliance-system/
+					proposal.md
+					design.md
+					tasks.md
+					specs/
+						compliance-system-lookup/spec.md
+						tire-compliance/spec.md
+	src/
+		fleet_tire_manager/
+			__init__.py
+			domain/
+				__init__.py
+				models.py
+				policy.py
+				scoring.py
+				exceptions.py
+			application/
+				__init__.py
+				contracts.py
+				use_cases/
+					__init__.py
+					evaluate_requisition.py
+					generate_purchase_draft.py
+			ports/
+				__init__.py
+				compliance_port.py
+				supplier_port.py
+				budget_port.py
+				clock_port.py
+			adapters/
+				__init__.py
+				compliance/
+					__init__.py
+					json_compliance_adapter.py
+				supplier/
+					__init__.py
+					json_supplier_adapter.py
+				budgeting/
+					__init__.py
+					json_budget_adapter.py
+			orchestration/
+				__init__.py
+				workflow_service.py
+			presentation/
+				__init__.py
+				cli.py
+			config/
+				__init__.py
+				settings.py
+	subsystem/
+		compliance-system/
+			compliance_system.py
+			mock/
+				tire-compliance-db.json
+		supplier-database/
+			mock/
+				suppliers-db.json
+		budgeting-system/
+			mock/
+				budgets-db.json
+	tests/
+		unit/
+			test_domain_compliance_policy.py
+			test_domain_scoring.py
+		adapters/
+			test_json_compliance_adapter.py
+			test_json_supplier_adapter.py
+			test_json_budget_adapter.py
+		integration/
+			test_evaluate_requisition_flow.py
+			test_generate_purchase_draft.py
+		test_compliance_system.py
+```
+
 ## Scope
 In scope for this draft scaffolding update:
 - Define and document module boundaries for domain, application, ports, adapters, orchestration, and presentation concerns.

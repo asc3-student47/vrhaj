@@ -119,12 +119,51 @@ We need to tie in all of these subsystems that we added to use pydantic agents i
 
 Lets add the true chat loop to handle multiple user prompts
 
-## 2026-06-17T14:06:08.6862253-04:00
+## 2026-06-17T14:36:40.0224539-04:00
 
 python run_recommendation_pipeline.py --chat
 C:\Users\labadmin\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\python.exe: can't open file 'C:\\LabFiles\\tire-agent\\fleet-tire-manager\\run_recommendation_pipeline.py': [Errno 2] No such file or directory
 
-## 2026-06-17T14:06:08.6862253-04:00
+## 2026-06-17T14:36:40.0224539-04:00
 
 Export this chat to the agent-chat-log
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+For all agent interactions, give a console log. With this, can we have a basic ui for the user so it will not need to be strictly used through cli
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+Does this mean the agent failed? [agent-log] {"event": "llm_extract_failed_fallback", "source": "web-ui", "ts": "2026-06-17T14:10:05.800578-04:00"}
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+Here was the full log: [agent-log] {"disable_llm": false, "event": "interaction_started", "prompt_preview": "Find compliant options in TX for 225/70R19.5, load index 120, speed rating K, require US-DOT.", "source": "web-ui", "ts": "2026-06-17T14:10:04.170988-04:00"}
+[agent-log] {"event": "llm_extract_failed_fallback", "source": "web-ui", "ts": "2026-06-17T14:10:05.800578-04:00"}
+[agent-log] {"elapsed_ms": 1631.88, "event": "interaction_completed", "source": "web-ui", "status": "match", "supplier_rows": 3, "ts": "2026-06-17T14:10:05.802869-04:00"}
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+So this correctly used pydantic
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+So this is a fully implemented working pydantic agent?
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+Lets make it pydantic only
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+It should be using our openai key: [agent-log] {"event": "interaction_started", "prompt_preview": "Find tires for 12 units of 225/70R19.5, load index 128, speed rating L, region TX.", "source": "web-ui", "ts": "2026-06-17T14:15:21.698296-04:00"}
+[agent-log] {"elapsed_ms": 1697.08, "error": "Set the `ANTHROPIC_API_KEY` environment variable or pass it via `AnthropicProvider(api_key=...)` to use the Anthropic provider.", "event": "llm_extract_failed", "source": "web-ui", "ts": "2026-06-17T14:15:23.395388-04:00"}
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+Make the ui a bit more fedex speciific, utlizeing orange and purple in it
+
+## 2026-06-17T14:36:40.0224539-04:00
+
+Export these chats to the agent chat log
 

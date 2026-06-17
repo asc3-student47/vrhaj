@@ -1,0 +1,143 @@
+1) help me connect to this repo a nd brnach that i have acces tohttps://github.com/asc3-student16/fleet-tire-manager.git
+
+2) pull the code from this brnach
+
+3) GIve me a lsit of agents in the system that i can itnroudce guardrails to right now
+
+4) In order to introduce guardrails in the agen to make sure we have structrued output. I wnat to introduce thef ollowing pricnciples to the output - Conform to a Strict Schema (Rubric Mandate)
+
+Why: The rubric explicitly requires that "Outputs conform to the Pydantic models defined in the spec." This is the most critical principle. Free-form text is unreliable and difficult for other systems to work with.
+
+How: Define every output your agent can produce as a pydantic.BaseModel. This ensures every output is structured, typed, and validated automatically.
+
+Include Rationale and Evidence with Decisions
+
+Why: The rubric requires the "Final decision (approve / deny / escalate...) includes supporting rationale tied to evidence." Your agent can't just provide an answer; it must explain why it reached that conclusion.
+
+How: Your Pydantic output schema must contain distinct fields for the decision itself (e.g., an Enum), the rationale (a string explaining the reasoning), and the evidence (e.g., a list of source data or facts used).
+
+Use Precise and Appropriate Data Types
+
+Why: Using the correct data types (e.g., float for prices, int for counts) enables automatic validation and prevents the agent from returning text where a number is expected.
+
+How:
+
+Use str, int, float, bool for basic data.
+
+Use Enum to constrain a field to a set of predefined choices (e.g., Sentiment.POSITIVE). This is far more reliable than using a free-form string.
+
+Use list[T] for collections of a specific type.
+
+Nest Pydantic models to represent complex, hierarchical data.
+
+Embrace Minimalism and Optionality
+
+Why: To prevent the agent from fabricating information, schemas should only include necessary fields and explicitly handle uncertainty.
+
+How:
+
+Include Only What's Needed: Your output model should only contain the fields required for the downstream task. Avoid adding superfluous data.
+
+Use Optional for Uncertainty: If a piece of information may not be present in the source data, define its field as Optional[str] = None. This prevents the LLM from inventing a value when one doesn't exist.
+
+Enforce Business Rules with Validators
+
+Why: A valid structure doesn't always mean the data is valid for your business context. Validators enforce domain-specific rules.
+
+How:
+
+Use Field for Constraints: Apply built-in constraints directly in your schema, such as rating: int = Field(ge=1, le=5) to ensure a value is within a specific range.
+
+Use @field_validator for Custom Logic: Implement custom validator functions for complex rules that Field cannot handle, such as ensuring a list is not empty or that a string matches a specific format.
+
+Plan for Multiple Output Formats with Unions
+
+Why: Sometimes an agent needs to return different shapes depending on the situation (e.g., a short answer vs. a detailed report). A typed Union allows this flexibility without sacrificing type safety.
+
+How: Define your agent’s output_type as a union of multiple Pydantic models, such as output_type=Union[ShortAnswer, DetailedReport]. This lets the agent decide which format is most appropriate while still guaranteeing a valid, predictable structure.
+
+By adhering to these principles, you will create a procurement agent that is not only functional but also reliable, maintainable, and fully compliant with the capstone rubric's high standards for engineering quality..
+
+explain the strcutrue of the recommendation pipline to me and where in the pipeline cna I set up these guradrails. I will use thsi repsonse to create a development plan
+
+5) Start implementation
+
+6) e;xplain the guardrails implemented int ask 3 as part of this step and how they align with the following concetps. also list out any gurardrails that ae affecting parts of the pipeline otuside of task 3. Do not [plan the implentation for the toher tasks yet, just explain what ahs been implemneted. Here are the examples - (the examples listed here are not to be ampped to the current proejct in a literal sense but the concetps listed here need to be implemented if not already done)- Conform to a Strict Schema (Rubric Mandate)
+
+Why: The rubric explicitly requires that "Outputs conform to the Pydantic models defined in the spec." This is the most critical principle. Free-form text is unreliable and difficult for other systems to work with.
+
+How: Define every output your agent can produce as a pydantic.BaseModel. This ensures every output is structured, typed, and validated automatically.
+
+Include Rationale and Evidence with Decisions
+
+Why: The rubric requires the "Final decision (approve / deny / escalate...) includes supporting rationale tied to evidence." Your agent can't just provide an answer; it must explain why it reached that conclusion.
+
+How: Your Pydantic output schema must contain distinct fields for the decision itself (e.g., an Enum), the rationale (a string explaining the reasoning), and the evidence (e.g., a list of source data or facts used).
+
+Use Precise and Appropriate Data Types
+
+Why: Using the correct data types (e.g., float for prices, int for counts) enables automatic validation and prevents the agent from returning text where a number is expected.
+
+How:
+
+Use str, int, float, bool for basic data.
+
+Use Enum to constrain a field to a set of predefined choices (e.g., Sentiment.POSITIVE). This is far more reliable than using a free-form string.
+
+Use list[T] for collections of a specific type.
+
+Nest Pydantic models to represent complex, hierarchical data.
+
+Embrace Minimalism and Optionality
+
+Why: To prevent the agent from fabricating information, schemas should only include necessary fields and explicitly handle uncertainty.
+
+How:
+
+Include Only What's Needed: Your output model should only contain the fields required for the downstream task. Avoid adding superfluous data.
+
+Use Optional for Uncertainty: If a piece of information may not be present in the source data, define its field as Optional[str] = None. This prevents the LLM from inventing a value when one doesn't exist.
+
+Enforce Business Rules with Validators
+
+Why: A valid structure doesn't always mean the data is valid for your business context. Validators enforce domain-specific rules.
+
+How:
+
+Use Field for Constraints: Apply built-in constraints directly in your schema, such as rating: int = Field(ge=1, le=5) to ensure a value is within a specific range.
+
+Use @field_validator for Custom Logic: Implement custom validator functions for complex rules that Field cannot handle, such as ensuring a list is not empty or that a string matches a specific format.
+
+Plan for Multiple Output Formats with Unions
+
+Why: Sometimes an agent needs to return different shapes depending on the situation (e.g., a short answer vs. a detailed report). A typed Union allows this flexibility without sacrificing type safety.
+
+How: Define your agent’s output_type as a union of multiple Pydantic models, such as output_type=Union[ShortAnswer, DetailedReport]. This lets the agent decide which format is most appropriate while still guaranteeing a valid, predictable structure.
+
+7) Create a plan to align tasks 1 and 2 with the rubric concepts i have listed to make sure they follow the strict pydantic output schema deisgn
+
+8) Start implementation
+
+9) there are chanegs to the branch, create a diff between the current code in my local (the updaetd implentation) and teh updtes in the remote. Once done, tell me if pulling the changes from the remote will affect my implenation. If it does, suggest other plans (sucha s pushing my changes to a new branch and creating a PR). DO NOT PULL THE CHNAGES YET.
+
+10) start plan 1
+
+11) help me create a new branch for the updated code in my local. My vscode is currently connected to the gitjhub repo. If you are unable to create the rbanch adn push teh code, guie me throguh using the vscode github ui to do it myself
+
+12) i have to create a fork from the remote repo before i can push my changes. create a fork from the remote repo an dthen push the chanegs there
+
+13) create a file with all of the prompts you r ecievd in this session. Do not include the reponses, just the prompts in the order you received them.
+14) exlpain the output validation setup for the agent sof ar
+
+15) I want to create a plan to extend the guradrailes to the following action items - 
+Action Item: Ensure your Task 1 or system-boundary entry-point has a fast-path refusal mechanism that returns a structured, safe "Out-of-Policy Refusal" payload rather than attempting to score or process the request.
+
+Action Item: Add negative test cases asserting that passing invalid data (e.g., a candidate with a negative score, empty evidence references, or mismatched compliance/human-review combinations) correctly raises a ValidationError from your Pydantic schemas. Test that the pipeline catches these and returns the expected structured error payloads [GAI-2109-StudentLessonGuide.pdf 47, 48].
+
+16) Start implementation
+
+17) How is out-of-policy logic evaluated? Do you use an upfront classifier (such as a fast regex or a low-latency LLM guardrail), or do you rely on downstream prompt instructions to decline out-of-policy requests?
+
+What does the handoff mechanism look like? When an escalation occurs, does the agent yield its state to a database/UI queue, or does it trigger a specific API transition to another system?
+
+18) add all the prompts from this chat session to the .txt file

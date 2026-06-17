@@ -4,6 +4,9 @@ import importlib.util
 from pathlib import Path
 import sys
 
+import pytest
+from pydantic import ValidationError
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "subsystem" / "recommendation-agent" / "task1_compliance.py"
@@ -24,6 +27,7 @@ TRACEABILITY_SIZE_AND_RATING = task1_compliance.TRACEABILITY_SIZE_AND_RATING
 TRACEABILITY_REGIONAL_LEGAL = task1_compliance.TRACEABILITY_REGIONAL_LEGAL
 TRACEABILITY_POLICY_TRACE = task1_compliance.TRACEABILITY_POLICY_TRACE
 TRACEABILITY_AMBIGUITY = task1_compliance.TRACEABILITY_AMBIGUITY
+CandidateCompliance = task1_compliance.CandidateCompliance
 
 
 def _result_by_sku(result: object, sku: str) -> object:
@@ -107,3 +111,66 @@ def test_task1_escalates_ambiguous_policy_conflict_and_blocks_auto_recommendatio
     assert "policy_precedence" in mic.failed_rules
     assert TRACEABILITY_AMBIGUITY in mic.traceability_refs
     assert result.auto_recommendation_blocked is True
+
+
+def test_task1_candidate_compliance_rejects_human_review_marked_eligible() -> None:
+    with pytest.raises(ValidationError):
+        CandidateCompliance(
+            sku="SKU-1",
+            eligible=True,
+            requires_human_review=True,
+            failed_rules=["policy_precedence"],
+            reasons=["manual review required"],
+            policy_version="policy-2026.06",
+            evaluated_at_utc="2026-06-17T00:00:00Z",
+            traceability_refs=[TRACEABILITY_AMBIGUITY],
+            evidence=[
+                {
+                    "rule": "policy_precedence",
+                    "detail": "manual review required",
+                    "traceability_ref": TRACEABILITY_AMBIGUITY,
+                }
+            ],
+        )
+
+
+def test_task1_candidate_compliance_rejects_non_eligible_without_fail_reasons() -> None:
+    with pytest.raises(ValidationError):
+        CandidateCompliance(
+            sku="SKU-2",
+            eligible=False,
+            requires_human_review=False,
+            failed_rules=[],
+            reasons=[],
+            policy_version="policy-2026.06",
+            evaluated_at_utc="2026-06-17T00:00:00Z",
+            traceability_refs=[TRACEABILITY_SIZE_AND_RATING],
+            evidence=[
+                {
+                    "rule": "load_index",
+                    "detail": "load_index below minimum",
+                    "traceability_ref": TRACEABILITY_SIZE_AND_RATING,
+                }
+            ],
+        )
+
+
+def test_task1_candidate_compliance_rejects_human_review_without_policy_precedence_rule() -> None:
+    with pytest.raises(ValidationError):
+        CandidateCompliance(
+            sku="SKU-3",
+            eligible=False,
+            requires_human_review=True,
+            failed_rules=["region_code"],
+            reasons=["region policy unresolved"],
+            policy_version="policy-2026.06",
+            evaluated_at_utc="2026-06-17T00:00:00Z",
+            traceability_refs=[TRACEABILITY_AMBIGUITY],
+            evidence=[
+                {
+                    "rule": "region_code",
+                    "detail": "region policy unresolved",
+                    "traceability_ref": TRACEABILITY_AMBIGUITY,
+                }
+            ],
+        )

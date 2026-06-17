@@ -173,3 +173,60 @@ def test_task3_returns_explicit_no_match_with_reason_codes(tmp_path: Path) -> No
     assert "reason_codes" in response
     assert "INSUFFICIENT_AVAILABILITY" in response["reason_codes"]
     assert "suggested_relaxations" in response
+
+
+def test_task3_fast_path_refusal_returns_structured_out_of_policy_payload() -> None:
+    response = search_inventory(
+        COMPLIANCE_DB_PATH,
+        SUPPLIERS_DB_PATH,
+        SearchRequest(
+            tire_size="225/70R19.5",
+            load_index=120,
+            speed_rating="K",
+            region_code="TX",
+            quantity_needed=2501,
+            replacement_urgency="medium",
+            include_compliance_summary=False,
+            required_certifications=["US-DOT"],
+            application="Regional delivery",
+        ),
+        policy_version="policy-2026.06",
+    )
+
+    assert response["status"] == "no_match"
+    assert response["decision"] == "deny"
+    assert "OUT_OF_POLICY_REFUSAL" in response["reason_codes"]
+    assert "results" not in response
+    assert response["evidence"]
+    assert response["traceability_refs"]
+
+
+def test_task3_fast_path_refusal_skips_preprocess_and_ranking(monkeypatch: object) -> None:
+    def _fail_preprocess(*args: object, **kwargs: object) -> object:
+        raise AssertionError("preprocess should not run for out-of-policy refusal")
+
+    def _fail_rank(*args: object, **kwargs: object) -> object:
+        raise AssertionError("ranking should not run for out-of-policy refusal")
+
+    monkeypatch.setattr(task3, "preprocess_candidates_with_compliance", _fail_preprocess)
+    monkeypatch.setattr(task3, "rank_compliant_candidates", _fail_rank)
+
+    response = search_inventory(
+        COMPLIANCE_DB_PATH,
+        SUPPLIERS_DB_PATH,
+        SearchRequest(
+            tire_size="225/70R19.5",
+            load_index=120,
+            speed_rating="K",
+            region_code="TX",
+            quantity_needed=2501,
+            replacement_urgency="medium",
+            include_compliance_summary=False,
+            required_certifications=["US-DOT"],
+            application="Regional delivery",
+        ),
+        policy_version="policy-2026.06",
+    )
+
+    assert response["status"] == "no_match"
+    assert "OUT_OF_POLICY_REFUSAL" in response["reason_codes"]

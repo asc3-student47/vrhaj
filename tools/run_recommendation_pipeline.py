@@ -32,6 +32,7 @@ def _console_log(event: str, **fields: object) -> None:
 
 
 class ResolvedRequest(BaseModel):
+    sku: str | None = None
     tire_size: str = Field(min_length=3)
     load_index: int = Field(ge=1, le=999)
     speed_rating: str = Field(min_length=1, max_length=1)
@@ -44,6 +45,7 @@ class ResolvedRequest(BaseModel):
 
 
 class PromptExtraction(BaseModel):
+    sku: str | None = None
     tire_size: str | None = None
     load_index: int | None = None
     speed_rating: str | None = None
@@ -144,6 +146,7 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Free-text request. Example: 'Need 24 tires size 225/70R19.5 load index 120 speed rating K in TX urgency medium'",
     )
+    parser.add_argument("--sku", default="")
     parser.add_argument("--tire-size", default="")
     parser.add_argument("--load-index", type=int, default=0)
     parser.add_argument("--speed-rating", default="")
@@ -176,6 +179,7 @@ def parse_args() -> argparse.Namespace:
 def build_runtime_args(
     *,
     prompt: str = "",
+    sku: str = "",
     tire_size: str = "",
     load_index: int = 0,
     speed_rating: str = "",
@@ -193,6 +197,7 @@ def build_runtime_args(
 ) -> argparse.Namespace:
     return argparse.Namespace(
         prompt=prompt,
+        sku=sku,
         tire_size=tire_size,
         load_index=load_index,
         speed_rating=speed_rating,
@@ -211,11 +216,12 @@ def build_runtime_args(
 
 
 def _merge_with_cli_overrides(args: argparse.Namespace, extracted: PromptExtraction) -> dict[str, object]:
-    tire_size = args.tire_size or extracted.tire_size or "225/70R19.5"
-    load_index = args.load_index or extracted.load_index or 120
-    speed_rating = args.speed_rating or extracted.speed_rating or "K"
-    region_code = args.region_code or extracted.region_code or "TX"
-    quantity_needed = args.quantity_needed or extracted.quantity_needed or 24
+    sku = args.sku or extracted.sku
+    tire_size = args.tire_size or extracted.tire_size
+    load_index = args.load_index or extracted.load_index
+    speed_rating = args.speed_rating or extracted.speed_rating
+    region_code = args.region_code or extracted.region_code
+    quantity_needed = args.quantity_needed or extracted.quantity_needed
     replacement_urgency = args.replacement_urgency or extracted.replacement_urgency or "medium"
     application = args.application or extracted.application or "Regional delivery"
 
@@ -223,17 +229,18 @@ def _merge_with_cli_overrides(args: argparse.Namespace, extracted: PromptExtract
     required_certifications = cli_certs or extracted.required_certifications or ["US-DOT"]
     include_compliance_summary = args.include_compliance_summary or extracted.include_compliance_summary
 
-    return ResolvedRequest(
-        tire_size=str(tire_size),
-        load_index=int(load_index),
-        speed_rating=str(speed_rating).upper(),
-        region_code=str(region_code).upper(),
-        quantity_needed=int(quantity_needed),
-        replacement_urgency=str(replacement_urgency),
-        application=str(application),
-        required_certifications=list(required_certifications),
-        include_compliance_summary=bool(include_compliance_summary),
-    ).model_dump()
+    return {
+        "sku": str(sku).strip().upper() if sku else None,
+        "tire_size": str(tire_size).strip() if tire_size else None,
+        "load_index": int(load_index) if load_index is not None else None,
+        "speed_rating": str(speed_rating).strip().upper() if speed_rating else None,
+        "region_code": str(region_code).strip().upper() if region_code else None,
+        "quantity_needed": int(quantity_needed) if quantity_needed is not None else None,
+        "replacement_urgency": str(replacement_urgency),
+        "application": str(application),
+        "required_certifications": list(required_certifications),
+        "include_compliance_summary": bool(include_compliance_summary),
+    }
 
 
 def _resolve_with_pydantic_agent(args: argparse.Namespace) -> dict[str, object]:
@@ -319,6 +326,140 @@ def _is_exit_command(text: str) -> bool:
     return text.strip().lower() in {"exit", "quit", "q"}
 
 
+def _schema_validation_error_payload(source: str, exc: ValidationError) -> dict[str, object]:
+    return {
+        "error": "schema_validation_error",
+        "source": source,
+        "details": exc.errors(),
+    }
+
+
+def _invalid_request_payload(*, reason: str, details: dict[str, object]) -> dict[str, object]:
+    return {
+        "error": "invalid_request",
+        "source": "prompt_extraction_sufficiency",
+        "reason": reason,
+        "details": details,
+    }
+
+
+def _lookup_sku_record(
+    sku: str,
+    compliance_db_path: Path,
+    suppliers_db_path: Path,
+) -> dict[str, object] | None:
+    if not sku:
+        return None
+
+    normalized_sku = sku.strip().upper()
+    with compliance_db_path.open("r", encoding="utf-8") as f:
+        compliance_payload = json.load(f)
+    if isinstance(compliance_payload, list):
+        for record in compliance_payload:
+            if not isinstance(record, dict):
+                continue
+            record_sku = str(record.get("sku", "")).strip().upper()
+            if record_sku == normalized_sku:
+                return record
+
+    with suppliers_db_path.open("r", encoding="utf-8") as f:
+        supplier_payload = json.load(f)
+    if isinstance(supplier_payload, list):
+        for supplier in supplier_payload:
+            if not isinstance(supplier, dict):
+                continue
+            contracts = supplier.get("contracts", [])
+            if not isinstance(contracts, list):
+                continue
+            for contract in contracts:
+                if not isinstance(contract, dict):
+                    continue
+                contract_sku = str(contract.get("sku", "")).strip().upper()
+                if contract_sku == normalized_sku:
+                    return {"sku": contract_sku, "tire_size": None}
+
+    return None
+
+
+def _resolve_request_or_error(
+    resolved_raw: dict[str, object],
+    args: argparse.Namespace,
+) -> tuple[ResolvedRequest | None, dict[str, object] | None]:
+    missing_critical_fields = [
+        field
+        for field in ["load_index", "speed_rating", "region_code"]
+        if resolved_raw.get(field) in (None, "")
+    ]
+    if missing_critical_fields:
+        return None, _invalid_request_payload(
+            reason="missing_critical_fields",
+            details={"missing_fields": missing_critical_fields},
+        )
+
+    sku = str(resolved_raw.get("sku") or "").strip().upper() or None
+    tire_size = str(resolved_raw.get("tire_size") or "").strip() or None
+    quantity_needed_raw = resolved_raw.get("quantity_needed")
+    quantity_needed = int(quantity_needed_raw) if quantity_needed_raw is not None else None
+
+    has_tire_and_quantity = bool(tire_size) and quantity_needed is not None
+    has_sku = bool(sku)
+
+    if not has_tire_and_quantity and not has_sku:
+        return None, _invalid_request_payload(
+            reason="missing_conditional_fields",
+            details={
+                "missing_fields": ["tire_size", "quantity_needed", "sku"],
+                "requirement": "provide tire_size and quantity_needed or provide sku",
+            },
+        )
+
+    sku_record = None
+    if has_sku:
+        sku_record = _lookup_sku_record(sku, args.compliance_db, args.suppliers_db)
+        if sku_record is None:
+            reason = "invalid_sku"
+            if not has_tire_and_quantity:
+                reason = "search_cannot_take_place_since_input_could_not_be_validated"
+            return None, _invalid_request_payload(
+                reason=reason,
+                details={
+                    "invalid_sku": sku,
+                    "missing_fields": [] if has_tire_and_quantity else ["tire_size", "quantity_needed"],
+                },
+            )
+
+    if not tire_size and sku_record is not None:
+        derived_tire_size = str(sku_record.get("tire_size") or "").strip() if isinstance(sku_record, dict) else ""
+        if derived_tire_size:
+            tire_size = derived_tire_size
+
+    if quantity_needed is None and has_sku:
+        # For explicit SKU lookups without quantity, use a minimal quantity probe.
+        quantity_needed = 1
+
+    if not tire_size or quantity_needed is None:
+        return None, _invalid_request_payload(
+            reason="search_cannot_take_place_since_input_could_not_be_validated",
+            details={
+                "missing_fields": [field for field, value in [("tire_size", tire_size), ("quantity_needed", quantity_needed)] if not value],
+            },
+        )
+
+    resolved = ResolvedRequest(
+        sku=sku,
+        tire_size=tire_size,
+        load_index=int(resolved_raw["load_index"]),
+        speed_rating=str(resolved_raw["speed_rating"]),
+        region_code=str(resolved_raw["region_code"]),
+        quantity_needed=quantity_needed,
+        replacement_urgency=str(resolved_raw.get("replacement_urgency") or "medium"),
+        application=str(resolved_raw.get("application") or "Regional delivery"),
+        required_certifications=list(resolved_raw.get("required_certifications") or ["US-DOT"]),
+        include_compliance_summary=bool(resolved_raw.get("include_compliance_summary", False)),
+    )
+    return resolved, None
+
+
 def _process_prompt(
     args: argparse.Namespace,
     task3: object,
@@ -336,7 +477,7 @@ def _process_prompt(
     )
 
     try:
-        resolved = _resolve_with_pydantic_agent(args)
+        resolved_raw = _resolve_with_pydantic_agent(args)
     except ValidationError as exc:
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         _console_log("interaction_validation_error", source=source, elapsed_ms=elapsed_ms)
@@ -355,24 +496,49 @@ def _process_prompt(
             "hint": "Verify model credentials and network access, or choose a reachable model.",
         }
 
+    resolved, invalid_payload = _resolve_request_or_error(resolved_raw, args)
+    if invalid_payload is not None:
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+        _console_log(
+            "interaction_validation_error",
+            source=source,
+            elapsed_ms=elapsed_ms,
+            phase="prompt_extraction_sufficiency",
+            reason=invalid_payload.get("reason"),
+        )
+        return 2, invalid_payload
+
+    assert resolved is not None
+    resolved_dict = resolved.model_dump()
+
     request = task3.SearchRequest(
-        tire_size=resolved["tire_size"],
-        load_index=resolved["load_index"],
-        speed_rating=resolved["speed_rating"],
-        region_code=resolved["region_code"],
-        quantity_needed=resolved["quantity_needed"],
-        replacement_urgency=resolved["replacement_urgency"],
-        include_compliance_summary=resolved["include_compliance_summary"],
-        required_certifications=resolved["required_certifications"],
-        application=resolved["application"],
+        tire_size=resolved_dict["tire_size"],
+        load_index=resolved_dict["load_index"],
+        speed_rating=resolved_dict["speed_rating"],
+        region_code=resolved_dict["region_code"],
+        quantity_needed=resolved_dict["quantity_needed"],
+        replacement_urgency=resolved_dict["replacement_urgency"],
+        include_compliance_summary=resolved_dict["include_compliance_summary"],
+        required_certifications=resolved_dict["required_certifications"],
+        application=resolved_dict["application"],
     )
 
-    response = task3.search_inventory(
-        args.compliance_db,
-        args.suppliers_db,
-        request,
-        policy_version=args.policy_version,
-    )
+    try:
+        response = task3.search_inventory(
+            args.compliance_db,
+            args.suppliers_db,
+            request,
+            policy_version=args.policy_version,
+        )
+    except ValidationError as exc:
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+        _console_log(
+            "interaction_schema_validation_error",
+            source=source,
+            elapsed_ms=elapsed_ms,
+            phase="task3_processing",
+        )
+        return 2, _schema_validation_error_payload("task3_processing", exc)
 
     resolved_sku = _resolve_primary_sku(response)
     supplier_lookup: list[dict[str, object]] = []
@@ -381,14 +547,24 @@ def _process_prompt(
             supplier_module,
             args.suppliers_db,
             resolved_sku,
-            int(resolved["quantity_needed"]),
-            str(resolved["replacement_urgency"]),
+            int(resolved_dict["quantity_needed"]),
+            str(resolved_dict["replacement_urgency"]),
         )
 
-    validated_response = SEARCH_RESPONSE_ADAPTER.validate_python(response).model_dump(exclude_none=True)
+    try:
+        validated_response = SEARCH_RESPONSE_ADAPTER.validate_python(response).model_dump(exclude_none=True)
+    except ValidationError as exc:
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+        _console_log(
+            "interaction_schema_validation_error",
+            source=source,
+            elapsed_ms=elapsed_ms,
+            phase="task3_response_schema",
+        )
+        return 2, _schema_validation_error_payload("task3_response_schema", exc)
 
     output = {
-        "resolved_request": resolved,
+        "resolved_request": resolved_dict,
         "response": validated_response,
         "supplier_lookup": supplier_lookup,
     }

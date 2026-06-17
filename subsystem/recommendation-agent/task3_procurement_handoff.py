@@ -7,7 +7,7 @@ import json
 import sys
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError, field_validator, model_validator
 
 
 # Traceability references for task 3 implementation.
@@ -15,6 +15,13 @@ TRACEABILITY_FILTERING = "openspec/specs/procurement-handoff/spec.md::Requiremen
 TRACEABILITY_RANKING = "openspec/specs/procurement-handoff/spec.md::Requirement: Result ranking for search relevance"
 TRACEABILITY_CONDITIONAL_COMPLIANCE = "openspec/specs/procurement-handoff/spec.md::Requirement: Conditional compliance detail in search response"
 TRACEABILITY_NO_MATCH = "openspec/specs/procurement-handoff/spec.md::Requirement: Explicit no-match response"
+
+OUT_OF_POLICY_REASON_CODE = "OUT_OF_POLICY_REFUSAL"
+REQUEST_SCHEMA_INVALID_REASON = "REQUEST_SCHEMA_INVALID"
+UNSUPPORTED_URGENCY_REASON = "UNSUPPORTED_URGENCY"
+QUANTITY_EXCEEDS_AUTOMATION_LIMIT_REASON = "QUANTITY_EXCEEDS_AUTOMATION_LIMIT"
+MAX_AUTOMATION_QUANTITY = 2500
+SUPPORTED_URGENCY = {"low", "medium", "high"}
 
 
 def _load_module(module_name: str, file_name: str) -> object:
@@ -263,6 +270,82 @@ def _build_no_match_evidence(reason_codes: list[str]) -> list[DecisionEvidence]:
     ]
 
 
+def _safe_match_request(request: SearchRequest) -> MatchRequest:
+    tire_size = str(getattr(request, "tire_size", "") or "").strip() or "UNK"
+    if len(tire_size) < 3:
+        tire_size = "UNK"
+
+    try:
+        load_index = int(getattr(request, "load_index", 1) or 1)
+    except (TypeError, ValueError):
+        load_index = 1
+    load_index = max(load_index, 1)
+
+    speed_rating_raw = str(getattr(request, "speed_rating", "") or "K").strip().upper()
+    speed_rating = speed_rating_raw[:1] if speed_rating_raw else "K"
+
+    region_raw = str(getattr(request, "region_code", "") or "TX").strip().upper()
+    region_code = region_raw[:2] if len(region_raw) >= 2 else "TX"
+
+    try:
+        quantity_needed = int(getattr(request, "quantity_needed", 1) or 1)
+    except (TypeError, ValueError):
+        quantity_needed = 1
+    quantity_needed = max(quantity_needed, 1)
+
+    return MatchRequest(
+        tire_size=tire_size,
+        load_index=load_index,
+        speed_rating=speed_rating,
+        region_code=region_code,
+        quantity_needed=quantity_needed,
+    )
+
+
+def _out_of_policy_reason_codes(
+    request_payload: MatchRequest,
+    replacement_urgency: str,
+) -> list[str]:
+    reasons: list[str] = []
+    if request_payload.quantity_needed > MAX_AUTOMATION_QUANTITY:
+        reasons.append(QUANTITY_EXCEEDS_AUTOMATION_LIMIT_REASON)
+    if replacement_urgency.lower() not in SUPPORTED_URGENCY:
+        reasons.append(UNSUPPORTED_URGENCY_REASON)
+    return reasons
+
+
+def _build_out_of_policy_refusal(
+    request_payload: MatchRequest,
+    reason_codes: list[str],
+) -> dict[str, object]:
+    normalized_reason_codes = [OUT_OF_POLICY_REASON_CODE, *reason_codes]
+    response = NoMatchResponse(
+        status="no_match",
+        decision="deny",
+        rationale="request is out of policy for autonomous recommendation processing",
+        evidence=[
+            DecisionEvidence(
+                source="policy_guardrail",
+                detail="request refused before scoring due to policy guardrails",
+                traceability_ref=TRACEABILITY_FILTERING,
+            ),
+            DecisionEvidence(
+                source="policy_guardrail",
+                detail="out-of-policy refusal generated as safe boundary response",
+                traceability_ref=TRACEABILITY_NO_MATCH,
+            ),
+        ],
+        request=request_payload,
+        reason_codes=normalized_reason_codes,
+        suggested_relaxations=["request_manual_review"],
+        traceability_refs=[
+            TRACEABILITY_FILTERING,
+            TRACEABILITY_NO_MATCH,
+        ],
+    )
+    return SEARCH_RESPONSE_ADAPTER.validate_python(response).model_dump(exclude_none=True)
+
+
 def search_inventory(
     compliance_db_path: str | Path,
     suppliers_db_path: str | Path,
@@ -275,6 +358,23 @@ def search_inventory(
 
     Deterministic output order is inherited from task 2 ranking flow.
     """
+    request_payload = _safe_match_request(request)
+
+    try:
+        MatchRequest(
+            tire_size=request.tire_size,
+            load_index=request.load_index,
+            speed_rating=request.speed_rating,
+            region_code=request.region_code,
+            quantity_needed=request.quantity_needed,
+        )
+    except ValidationError:
+        return _build_out_of_policy_refusal(request_payload, [REQUEST_SCHEMA_INVALID_REASON])
+
+    refusal_reason_codes = _out_of_policy_reason_codes(request_payload, request.replacement_urgency)
+    if refusal_reason_codes:
+        return _build_out_of_policy_refusal(request_payload, refusal_reason_codes)
+
     preprocess_result = preprocess_candidates_with_compliance(
         compliance_db_path,
         suppliers_db_path,
@@ -337,14 +437,6 @@ def search_inventory(
             }
 
         ranked_items.append(item)
-
-    request_payload = MatchRequest(
-        tire_size=request.tire_size,
-        load_index=request.load_index,
-        speed_rating=request.speed_rating,
-        region_code=request.region_code,
-        quantity_needed=request.quantity_needed,
-    )
 
     if ranked_items:
         response = MatchResponse(

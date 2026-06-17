@@ -1,5 +1,7 @@
 # Tire Compliance
 
+Boundary note: this capability defines legal/policy compliance semantics and escalation behavior; low-level record lookup and request-to-record matching live in `compliance-system-lookup`.
+
 ## Requirement: Size and rating eligibility
 The system SHALL evaluate eligibility using tire specifications returned by the compliance subsystem lookup and only consider tires that satisfy required fitment and intended-use attributes for the request.
 

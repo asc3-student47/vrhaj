@@ -24,6 +24,9 @@
 - The main agent lives in `agent.py`
 - Mock data access goes through `data/loader.py` — do not read JSON files directly in tool code
 
+## Openspec CLI
+- If openspec cli is not available, agent must rerun openspec commands using npx. If npx is not available, agent should tell the user to install openspec cli or npx to proceed. DO NOT proceed if neither is available. 
+
 ## Mock Data
 - All test data access must go through `data/loader.py`
 
@@ -82,4 +85,5 @@ ITC.003-compliant test execution record.
 - Whenever the revert procedure or deployment approach changes
 
 ## Rubix requirments on chat log
-- When requested by user, agent must append chat log to `docs/agent-chat-log.md` in ISO 8601 format with timezone. Only include user prompts.
+- Agent must append chat log to `docs/agent-chat-log.md` in ISO 8601 format with timezone. Only include user prompts. Agent is allowed to execute shell commands to read/write this file as needed. Agent should not include any system or tool outputs in the chat log, only user prompts.
+- If requested by user, agent must append log to a separate file defined by user. Ask for file name if not specified for current session. File must be in `docs/` directory and have .md extension. Agent should validate file name before writing to it.

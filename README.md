@@ -28,8 +28,10 @@ openspec/
 ├── config.yaml
 ├── specs/
 │   ├── spec-architecture.md
+│   ├── compliance-system-lookup/spec.md
 │   ├── fleet-tire-management/spec.md
 │   ├── procurement-handoff/spec.md
+│   ├── supplier-system-lookup/spec.md
 │   ├── tire-compliance/spec.md
 │   └── tire-recommendation/spec.md
 └── changes/
@@ -42,5 +44,7 @@ pyproject.toml
 subsystem/
 ├── budgeting-system/
 ├── compliance-system/
-└── supplier-database/
+└── supplier-system/
 ```
+
+Note: `procurement-handoff` is currently a planned capability in specs and may be out of scope for some implementation changes.

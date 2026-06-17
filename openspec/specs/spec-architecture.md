@@ -10,7 +10,7 @@ openspec/specs/
   fleet-tire-management/      # Existing baseline domain spec
   tire-compliance/            # Hard eligibility and legal/OEM policy rules
   tire-recommendation/        # Candidate scoring and ranking behavior
-        procurement-handoff/        # Tire inventory search API outputs and no-match behavior
+        procurement-handoff/        # Tire inventory search API outputs and no-match behavior (planned)
 ```
 
 ## Layering model
@@ -32,6 +32,8 @@ Inventory search response (results, summaries, no-match reasons)
 - `tire-compliance`: Defines pass/fail eligibility rules. No ranking logic.
 - `tire-recommendation`: Defines how compliant options are scored and sorted. No legal rule authoring.
 - `procurement-handoff`: Defines inventory search response contracts and no-match semantics.
+
+Current implementation note: compliance and supplier lookup subsystems are implemented; procurement handoff remains planned.
 
 ## Cross-cutting concerns
 - Explainability and auditability should be stated in each capability spec where behavior is produced.

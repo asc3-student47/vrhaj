@@ -1,5 +1,7 @@
 # Compliance System Lookup
 
+Boundary note: this capability defines record retrieval and request-to-record rule evaluation behavior; policy governance and legal ambiguity handling live in `tire-compliance`.
+
 ## Requirement: Tire specification lookup from mock database
 The compliance subsystem SHALL load tire model records from a JSON mock database and resolve records by SKU and/or fitment attributes.
 

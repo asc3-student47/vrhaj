@@ -86,3 +86,4 @@ Use subsystems/supplier-system/mock/suppliers-db.json as data model. Assume only
 Follow instructions in #prompt:opsx-propose.prompt.md with these arguments: implement-supplier-system
 
 Mark procurment-handoff as out of scope.
+

@@ -1,10 +1,10 @@
 ## 1. tire-compliance implementation
 
-- [ ] 1.1 Integrate compliance lookup into recommendation candidate preprocessing.
-- [ ] 1.2 Enforce fitment and legal/certification checks as hard eligibility gates.
-- [ ] 1.3 Attach policy version and evaluation timestamp to each compliance outcome.
-- [ ] 1.4 Add ambiguity escalation output (`requires_human_review`) and block auto-final recommendation on unresolved policy conflict.
-- [ ] 1.5 Add tests for eligibility failures, legal/cert failures, traceability fields, and escalation behavior.
+- [x] 1.1 Integrate compliance lookup into recommendation candidate preprocessing.
+- [x] 1.2 Enforce fitment and legal/certification checks as hard eligibility gates.
+- [x] 1.3 Attach policy version and evaluation timestamp to each compliance outcome.
+- [x] 1.4 Add ambiguity escalation output (`requires_human_review`) and block auto-final recommendation on unresolved policy conflict.
+- [x] 1.5 Add tests for eligibility failures, legal/cert failures, traceability fields, and escalation behavior.
 
 ## 2. tire-recommendation implementation
 

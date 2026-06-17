@@ -8,11 +8,11 @@
 
 ## 2. tire-recommendation implementation
 
-- [ ] 2.1 Build scoring flow that accepts only compliance-eligible candidates.
-- [ ] 2.2 Implement configurable weighted score components: availability, lifecycle cost, fuel impact, warranty quality.
-- [ ] 2.3 Implement fulfillment-aware ranking preference using `quantity_needed` and urgency lead-time constraints.
-- [ ] 2.4 Implement deterministic tie-break rules and document ordering behavior.
-- [ ] 2.5 Add tests for component score breakdown, fulfillment preference ordering, and stable ties across repeated runs.
+- [x] 2.1 Build scoring flow that accepts only compliance-eligible candidates.
+- [x] 2.2 Implement configurable weighted score components: availability, lifecycle cost, fuel impact, warranty quality.
+- [x] 2.3 Implement fulfillment-aware ranking preference using `quantity_needed` and urgency lead-time constraints.
+- [x] 2.4 Implement deterministic tie-break rules and document ordering behavior.
+- [x] 2.5 Add tests for component score breakdown, fulfillment preference ordering, and stable ties across repeated runs.
 
 ## 3. procurement-handoff implementation
 

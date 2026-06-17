@@ -100,3 +100,11 @@ Proceed
 ## 2026-06-17T09:18:00-05:00
 
 Log current session prompts to docs/agent-chat-log_feat-budget.md
+
+## 2026-06-17T09:19:00-05:00
+
+Follow instructions in #prompt:opsx-apply.prompt.md with these arguments: implement-budget-system
+
+## 2026-06-17T09:20:00-05:00
+
+Log current session prompts to docs/agent-chat-log_feat-budget.md

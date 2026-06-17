@@ -80,3 +80,6 @@ ITC.003-compliant test execution record.
 `backoutPlan.md` at the repository root is a living document. Update it:
 - Before the Session 4 peer review (fill in stable baseline commit hash and contacts)
 - Whenever the revert procedure or deployment approach changes
+
+## Rubix requirments on chat log
+- When requested by user, agent must append chat log to `docs/agent-chat-log.md` in ISO 8601 format with timezone. Only include user prompts.

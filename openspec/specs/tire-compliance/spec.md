@@ -1,20 +1,20 @@
 # Tire Compliance
 
 ## Requirement: Size and rating eligibility
-The system SHALL only consider tires that match required fitment attributes for the request.
+The system SHALL evaluate eligibility using tire specifications returned by the compliance subsystem lookup and only consider tires that satisfy required fitment and intended-use attributes for the request.
 
 #### Scenario: Reject mismatched fitment
-- GIVEN a request includes `tire_size`, `load_index`, and `speed_rating`
-- WHEN a catalog SKU does not support one or more required fitment attributes
+- GIVEN a request includes `tire_size`, `load_index`, `speed_rating`, and `application`
+- WHEN a lookup result does not satisfy one or more required attributes
 - THEN that SKU is marked ineligible
-- AND the ineligibility reason is recorded in compliance results
+- AND each failing attribute is recorded in compliance results
 
 ## Requirement: Regional legal and certification checks
-The system SHALL enforce regional regulatory constraints before recommendation ranking.
+The system SHALL enforce regional regulatory constraints using SKU certifications and supported region codes from compliance lookup data before recommendation ranking.
 
-#### Scenario: Reject uncertified SKU for region
+#### Scenario: Reject uncertified or unsupported SKU for region
 - GIVEN a request includes `region_code`
-- WHEN a SKU lacks required regional certification
+- WHEN a SKU lacks required certification or does not include that region in supported region codes
 - THEN that SKU is marked legally non-compliant
 - AND it is excluded from recommendation candidates
 

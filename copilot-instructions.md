@@ -82,4 +82,4 @@ ITC.003-compliant test execution record.
 - Whenever the revert procedure or deployment approach changes
 
 ## Rubix requirments on chat log
-- When requested by user, agent must append chat log to `docs/agent-chat-log.md` in ISO 8601 format with timezone. Only include user prompts.
+- When requested by user, agent must append chat log to `docs/agent-chat-log.md` in ISO 8601 format with timezone. Only include user prompts. Agent is allowed to execute shell commands to read/write this file as needed. Agent should not include any system or tool outputs in the chat log, only user prompts.

@@ -63,6 +63,7 @@ Rename test.json to tire-compliance-db.json
 Remove unit price from tire-compliance-db.json, and update compliance_system.py to reflect data attribute removal
 
 
+<<<<<<< HEAD
 ## 2026-06-17T10:52:07-04:00
 
 Follow instructions in #prompt:opsx-explore.prompt.md
@@ -83,4 +84,29 @@ Continue with task 4.
 
 Export this chat history to docs/agent-chat-log.md with a specific header so we can easily find it.
 
+=======
+
+## 2026-06-17T10:58:55-05:00
+
+Follow instructions in #prompt:opsx-explore.prompt.md with these arguments: Describe what compliance subsystem does
+
+## 2026-06-17T10:58:55-05:00
+
+Follow instructions in #prompt:opsx-propose.prompt.md with these arguments: implement-supplier-system
+
+Add a supplier system which can find matching suppliers for a given tire sku, quantity and delivery/lead time. The following criteria must be met to be included in the result.
+
+* Contract must be active i.e. expiration date must be after today.
+* Supplier has enough quantity fulfill the request
+* Supplier can meet the requested lead time, aka delivery time
+Contract must be active to be considered. Preferred suppliers should be at the top of the result.
+
+Use subsystems/supplier-system/mock/suppliers-db.json as data model. Assume only one active contract per supplier exists.
+
+## 2026-06-17T11:04:55-05:00
+
+Follow instructions in #prompt:opsx-propose.prompt.md with these arguments: implement-supplier-system
+
+Mark procurment-handoff as out of scope.
+>>>>>>> main
 

@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 TASK1_MODULE_PATH = REPO_ROOT / "subsystem" / "recommendation-agent" / "task1_compliance.py"
 TASK2_MODULE_PATH = REPO_ROOT / "subsystem" / "recommendation-agent" / "task2_recommendation.py"
 COMPLIANCE_DB_PATH = REPO_ROOT / "subsystem" / "compliance-system" / "mock" / "tire-compliance-db.json"
-SUPPLIERS_DB_PATH = REPO_ROOT / "subsystem" / "supplier-database" / "mock" / "suppliers-db.json"
+SUPPLIERS_DB_PATH = REPO_ROOT / "subsystem" / "supplier-system" / "mock" / "suppliers-db.json"
 
 
 task1_spec = importlib.util.spec_from_file_location("task1_compliance", TASK1_MODULE_PATH)

@@ -8,7 +8,7 @@ import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "subsystem" / "recommendation-agent" / "task3_procurement_handoff.py"
 COMPLIANCE_DB_PATH = REPO_ROOT / "subsystem" / "compliance-system" / "mock" / "tire-compliance-db.json"
-SUPPLIERS_DB_PATH = REPO_ROOT / "subsystem" / "supplier-database" / "mock" / "suppliers-db.json"
+SUPPLIERS_DB_PATH = REPO_ROOT / "subsystem" / "supplier-system" / "mock" / "suppliers-db.json"
 
 
 spec = importlib.util.spec_from_file_location("task3_procurement_handoff", MODULE_PATH)

@@ -8,7 +8,7 @@ import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "subsystem" / "recommendation-agent" / "task1_compliance.py"
 COMPLIANCE_DB_PATH = REPO_ROOT / "subsystem" / "compliance-system" / "mock" / "tire-compliance-db.json"
-SUPPLIERS_DB_PATH = REPO_ROOT / "subsystem" / "supplier-database" / "mock" / "suppliers-db.json"
+SUPPLIERS_DB_PATH = REPO_ROOT / "subsystem" / "supplier-system" / "mock" / "suppliers-db.json"
 
 
 spec = importlib.util.spec_from_file_location("task1_compliance", MODULE_PATH)

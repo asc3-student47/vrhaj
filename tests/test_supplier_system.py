@@ -44,7 +44,7 @@ def test_eligible_matches_preferred_first() -> None:
 def test_exclusion_paths_expired_quantity_and_lead_time() -> None:
     request = SupplierLookupRequest(
         sku="MIC-XZE2-225-70R19.5-128",
-        requested_quantity=900,
+        requested_quantity=9000,
         max_lead_time_days=10,
     )
 

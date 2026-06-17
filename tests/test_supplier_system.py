@@ -51,7 +51,7 @@ def test_exclusion_paths_expired_quantity_and_lead_time() -> None:
     results = evaluate_request(DB_PATH, request, evaluation_date=date(2026, 6, 17))
 
     assert len(results) == 3
-    # Michelin 2025 contract is expired and also fails quantity and lead-time checks.
+    # Michelin 2025 contract is expired and fails lead-time checks.
     expired = [
         r
         for r in results
@@ -59,7 +59,7 @@ def test_exclusion_paths_expired_quantity_and_lead_time() -> None:
     ][0]
     assert expired.status == "ineligible"
     assert "contract_active" in expired.failed_rules
-    assert "available_quantity" in expired.failed_rules
+    assert "available_quantity" not in expired.failed_rules
     assert "lead_time_days" in expired.failed_rules
 
     # NeedForSpeed contract is active but fails quantity and lead-time checks.

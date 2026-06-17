@@ -21,3 +21,4 @@
 
 - [ ] 4.1 Update contributor-facing documentation to describe responsibilities of `agent.py`, `models.py`, `tools/`, `data/`, and `tests/`
 - [ ] 4.2 Add naming guidance for future integration modules to keep concern boundaries clear
+- [ ] 4.3 Update `README.md` to reflect the scaffolded directory structure and note that `openspec/` and `subsystem/` remain unchanged

@@ -1,0 +1,70 @@
+[
+    {
+        "sku": "MIC-XZE2-225-70R19.5-128",
+        "manufacturer": "Michelin",
+        "product_line": "XZE2+",
+        "tire_size": "225/70R19.5",
+        "load_index": 128,
+        "speed_rating": "L",
+        "load_range": "G",
+        "application": "Regional delivery",
+        "position": "All-position",
+        "unit_price_usd": 428,
+        "estimated_mileage": 105000,
+        "certifications": [
+            "US-DOT",
+            "EPA-SmartWay"
+        ],
+        "region_codes": [
+            "TX",
+            "OK",
+            "NM",
+            "CA"
+        ]
+    },
+    {
+        "sku": "BFG-TRA-11R22.5-146",
+        "manufacturer": "BFGoodrich",
+        "product_line": "Truck Regional All-Position",
+        "tire_size": "11R22.5",
+        "load_index": 146,
+        "speed_rating": "M",
+        "load_range": "H",
+        "application": "Regional delivery",
+        "position": "All-position",
+        "unit_price_usd": 512,
+        "estimated_mileage": 118000,
+        "certifications": [
+            "US-DOT"
+        ],
+        "region_codes": [
+            "TX",
+            "LA",
+            "MS",
+            "AL"
+        ]
+    },
+    {
+        "sku": "GDL-RHG2-295-75R22.5-144",
+        "manufacturer": "Goodyear",
+        "product_line": "Regional RHG II",
+        "tire_size": "295/75R22.5",
+        "load_index": 144,
+        "speed_rating": "L",
+        "load_range": "G",
+        "application": "Long-haul",
+        "position": "Drive",
+        "unit_price_usd": 468,
+        "estimated_mileage": 132000,
+        "certifications": [
+            "US-DOT",
+            "EPA-SmartWay"
+        ],
+        "region_codes": [
+            "CA",
+            "NV",
+            "AZ",
+            "UT"
+        ]
+    }
+]

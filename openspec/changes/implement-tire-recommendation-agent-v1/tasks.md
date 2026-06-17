@@ -16,11 +16,11 @@
 
 ## 3. procurement-handoff implementation
 
-- [ ] 3.1 Implement inventory query filtering for fitment, region, and availability constraints.
-- [ ] 3.2 Return deterministic ranked response aligned to recommendation order.
-- [ ] 3.3 Support conditional compliance detail output (minimal default, verbose when requested).
-- [ ] 3.4 Implement explicit no-match response with machine-readable reason codes and suggested relaxation dimensions.
-- [ ] 3.5 Add contract tests for default response, verbose response, and no-match payload structure.
+- [x] 3.1 Implement inventory query filtering for fitment, region, and availability constraints.
+- [x] 3.2 Return deterministic ranked response aligned to recommendation order.
+- [x] 3.3 Support conditional compliance detail output (minimal default, verbose when requested).
+- [x] 3.4 Implement explicit no-match response with machine-readable reason codes and suggested relaxation dimensions.
+- [x] 3.5 Add contract tests for default response, verbose response, and no-match payload structure.
 
 ## 4. integration and release readiness
 

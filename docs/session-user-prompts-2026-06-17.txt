@@ -141,3 +141,134 @@ Action Item: Add negative test cases asserting that passing invalid data (e.g., 
 What does the handoff mechanism look like? When an escalation occurs, does the agent yield its state to a database/UI queue, or does it trigger a specific API transition to another system?
 
 18) add all the prompts from this chat session to the .txt file
+
+19) expalin how negative input validation is taking place in teh agent. i treid to input "hahaha" in the agent input and got the following repsonse - 
+Fed
+Ex
+Fleet Tire Recommendation Agent
+Example prompt: Need 24 tires size 225/70R19.5 load index 120 speed rating K in TX urgency medium for regional delivery and include compliance summary.
+
+hahahaha
+Run Recommendation
+Each request is logged in the server console.
+{
+	"resolved_request": {
+		"application": "Regional delivery",
+		"include_compliance_summary": false,
+		"load_index": 120,
+		"quantity_needed": 24,
+		"region_code": "TX",
+		"replacement_urgency": "medium",
+		"required_certifications": [
+			"US-DOT"
+		],
+		"speed_rating": "K",
+		"tire_size": "225/70R19.5"
+	},
+	"response": {
+		"decision": "approve",
+		"evidence": [
+			{
+				"detail": "1 compliant in-stock candidate(s) satisfy requested quantity",
+				"source": "ranking",
+				"traceability_ref": "openspec/specs/procurement-handoff/spec.md::Requirement: Result ranking for search relevance"
+			},
+			{
+				"detail": "top SKU MIC-XZE2-225-70R19.5-128 selected by deterministic ranking and fulfillment preference",
+				"source": "top_candidate",
+				"traceability_ref": "openspec/specs/procurement-handoff/spec.md::Requirement: Inventory query filtering"
+			}
+		],
+		"ranking_rule": "higher fulfillment, then higher availability, then shorter lead time, then lower unit price, then lexical SKU",
+		"rationale": "compliant and fulfillable inventory options were found and ranked deterministically",
+		"request": {
+			"load_index": 120,
+			"quantity_needed": 24,
+			"region_code": "TX",
+			"speed_rating": "K",
+			"tire_size": "225/70R19.5"
+		},
+		"results": [
+			{
+				"compliance_status": "compliant",
+				"fulfillment_rationale": "fulfillable within urgency lead-time constraints",
+				"lead_time_days": 14,
+				"score": 0.725,
+				"sku": "MIC-XZE2-225-70R19.5-128",
+				"stock_qty": 17500,
+				"traceability_refs": [
+					"openspec/specs/procurement-handoff/spec.md::Requirement: Inventory query filtering",
+					"openspec/specs/procurement-handoff/spec.md::Requirement: Result ranking for search relevance"
+				],
+				"unit_price": 350
+			}
+		],
+		"status": "match",
+		"traceability_refs": [
+			"openspec/specs/procurement-handoff/spec.md::Requirement: Inventory query filtering",
+			"openspec/specs/procurement-handoff/spec.md::Requirement: Result ranking for search relevance",
+			"openspec/specs/procurement-handoff/spec.md::Requirement: Conditional compliance detail in search response"
+		]
+	},
+	"supplier_lookup": [
+		{
+			"contract_id": "MIC-XZE2-2026",
+			"failed_rules": [],
+			"preferred": true,
+			"reasons": [
+				"contract active",
+				"sufficient quantity",
+				"lead time met"
+			],
+			"sku": "MIC-XZE2-225-70R19.5-128",
+			"status": "eligible",
+			"supplier_id": "729c7657-0dd4-4099-b6eb-76cd98f7f729",
+			"supplier_name": "Michelin"
+		},
+		{
+			"contract_id": "NFS-XZE2-2026",
+			"failed_rules": [],
+			"preferred": false,
+			"reasons": [
+				"contract active",
+				"sufficient quantity",
+				"lead time met"
+			],
+			"sku": "MIC-XZE2-225-70R19.5-128",
+			"status": "eligible",
+			"supplier_id": "445e287d-26df-4ffe-bf23-bda79b8a9651",
+			"supplier_name": "NeedForSpeed Tires"
+		},
+		{
+			"contract_id": "MIC-XZE2-2025",
+			"failed_rules": [
+				"contract_active"
+			],
+			"preferred": true,
+			"reasons": [
+				"contract inactive",
+				"sufficient quantity",
+				"lead time met"
+			],
+			"sku": "MIC-XZE2-225-70R19.5-128",
+			"status": "ineligible",
+			"supplier_id": "729c7657-0dd4-4099-b6eb-76cd98f7f729",
+			"supplier_name": "Michelin"
+		}
+	]
+}
+
+20) why does the agent currently have default values when using is supposed to prompt the agent with specific requests that contain data points to match their request wtih the appropriate result?
+
+21) Create a plan to modify the deaults in the pipeline to make sure that inavlid and nosesnical input is not replaced by a valid default prompt to fix this behavior - It can convert non-specific input into a valid request that looks intentional.
+That means users can get “real” recommendations based on fallback assumptions rather than their provided data.
+This undermines strict input-driven matching and can mask invalid prompt quality.
+In short: the system currently prioritizes completion over strict request fidelity. If you want strict behavior, defaults in run_recommendation_pipeline.py:213 should be replaced with an extraction sufficiency check that refuses or asks for clarification when critical fields are missing.
+
+22) modify the plan to include an additional conditinal input validation - either both tire_size, quantity_needed need to be provided or an SKU number needs to be porvided instead of the two. The  behvaior in case no match is found  for the SKU number should be to let the user know the SKU number was invalid. If the SKU is invalid and the tire_size, quantity_needed were not provided let he user know that the search cannot take place since the input could not be validated. Also create tests for these scenarios to make sure they are implemented as expected as part of the input vlaidation testing.
+
+23) Start implementation
+
+24) Push the updated code to the repository. Once it is psuhed, help me create a PR to emrge this forked repository witht he original one. Ask me questions for any context that might be missing during this rpocess (such as orginal repo url or destination repo branch etc)
+
+25) update the txt file to include all the prompt s from this session it does not ahve

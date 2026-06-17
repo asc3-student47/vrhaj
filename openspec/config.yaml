@@ -4,8 +4,8 @@ context: |
   FleetTireManager is a tire requisition agent that helps a FedEx truck fleet manager to requisition tires for their fleet. 
 
   A number of systems are involved in the tire requisition process, including:
-  - A compliance system that checks requsted tire meets DOT requirements
-  - A supplier database that contains information about tire suppliers and their inventory, what price they offer, and their delivery times.
+  - A compliance system that checks the requested tire meets DOT requirements
+  - A supplier system that contains information about tire suppliers and their inventory, what price they offer, and their delivery times.
   - A budgeting system that can lookup the budget available for a cost center
 
   At MVP, workflow will be as follows:
@@ -18,7 +18,7 @@ context: |
 
   The agent will then:
   - Check the compliance system to ensure the requested tires meet DOT requirements.
-  - Query the supplier database to find suppliers that have the requested tires in stock, along with their prices and delivery times.
+  - Query the supplier system to find suppliers that have the requested tires in stock, along with their prices and delivery times.
   - Check the budgeting system to ensure the requisition fits within cost center's available budget.
   - Provide the fleet manager with a list of compliant suppliers, their prices, and delivery times, and wait for user's decision.
 

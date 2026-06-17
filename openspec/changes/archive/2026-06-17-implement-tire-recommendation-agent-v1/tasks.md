@@ -24,7 +24,7 @@
 
 ## 4. integration and release readiness
 
-- [ ] 4.1 Add end-to-end tests validating compliance gating to ranked recommendations to handoff outputs.
-- [ ] 4.2 Verify v1 scope boundaries remain enforced (no autonomous PO submission, no route optimization workflows).
-- [ ] 4.3 Document config defaults for scoring weights and tie-break priorities.
-- [ ] 4.4 Update implementation notes to show traceability from code paths to the three capability specs.
+- [x] 4.1 Add end-to-end tests validating compliance gating to ranked recommendations to handoff outputs.
+- [x] 4.2 Verify v1 scope boundaries remain enforced (no autonomous PO submission, no route optimization workflows).
+- [x] 4.3 Document config defaults for scoring weights and tie-break priorities.
+- [x] 4.4 Update implementation notes to show traceability from code paths to the three capability specs.

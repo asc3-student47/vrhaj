@@ -95,3 +95,42 @@ Output minimums:
 - Unit tests for score component math and deterministic tie ordering.
 - Contract tests for default/minimal compliance output and verbose compliance output.
 - Contract tests for explicit no-match payload including reason codes.
+
+## Config defaults and ranking priorities (v1)
+
+Default scoring weights in implementation:
+- availability: 0.25
+- lifecycle_cost: 0.35
+- fuel_impact: 0.15
+- warranty_quality: 0.25
+
+Default urgency lead-time thresholds:
+- low: 30 days
+- medium: 14 days
+- high: 5 days
+
+Deterministic tie-break priorities for equal total score:
+1. higher fulfillment score
+2. higher availability score
+3. shorter lead time
+4. lower unit price
+5. lexical SKU ascending
+
+## Implementation traceability map
+
+Capability to code path mapping:
+
+- tire-compliance
+  - subsystem/recommendation-agent/task1_compliance.py
+  - tests/test_recommendation_task1_compliance.py
+
+- tire-recommendation
+  - subsystem/recommendation-agent/task2_recommendation.py
+  - tests/test_recommendation_task2_scoring.py
+
+- procurement-handoff
+  - subsystem/recommendation-agent/task3_procurement_handoff.py
+  - tests/test_recommendation_task3_handoff.py
+
+End-to-end integration and v1 scope boundary validation:
+- tests/test_recommendation_task4_integration.py

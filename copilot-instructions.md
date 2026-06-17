@@ -25,7 +25,6 @@
 - Mock data access goes through `data/loader.py` — do not read JSON files directly in tool code
 
 ## Mock Data
-- Do not modify files in `mock_data/` directly
 - All test data access must go through `data/loader.py`
 
 ## Agent Behavior

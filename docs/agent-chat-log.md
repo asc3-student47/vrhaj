@@ -87,3 +87,11 @@ Follow instructions in #prompt:opsx-propose.prompt.md with these arguments: impl
 
 Mark procurment-handoff as out of scope.
 
+## 2026-06-17T09:21:00-05:00
+
+There is a failing test case for supplier system. Analyze why it is failing and recommend fixes. Do not apply the fix yet.
+
+## 2026-06-17T09:22:00-05:00
+
+Apply fix using option 1
+

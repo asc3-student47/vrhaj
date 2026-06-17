@@ -7,8 +7,8 @@ This change defines a lightweight, module-first structure to improve discoverabi
 ## Goals / Non-Goals
 
 **Goals:**
-- Establish a clear top-level Python scaffold centered on `agent.py` and `models.py`.
-- Define responsibility boundaries for `tools/`, `data/`, and `tests/`.
+- Establish a clear top-level Python scaffold plan centered on future `agent.py` and `models.py` anchors.
+- Define responsibility boundaries for `tools/`, `data/`, and `tests/` with directory-level scaffolding in this phase.
 - Keep the structure simple enough for MVP iteration while reducing ambiguity for future implementation work.
 - Preserve current OpenSpec and subsystem directory structures.
 
@@ -17,23 +17,24 @@ This change defines a lightweight, module-first structure to improve discoverabi
 - Introducing deployment, packaging, or production infrastructure changes.
 - Refactoring existing subsystem mock data locations.
 - Defining detailed internal APIs for every module beyond ownership and placement expectations.
+- Creating missing scaffold module and test files in this change.
 
 ## Decisions
 
-1. Decision: Keep orchestration and shared contracts as explicit top-level modules (`agent.py`, `models.py`).
-Rationale: New contributors can quickly locate the interaction entrypoint and shared model definitions without traversing nested packages.
+1. Decision: Keep orchestration and shared contracts as explicit planned top-level modules (`agent.py`, `models.py`) but defer creating those files in this phase.
+Rationale: New contributors still get clear ownership guidance while this change remains limited to structure and documentation.
 Alternatives considered:
 - Move all code into a deep package tree (rejected: unnecessary complexity for MVP).
 - Keep only package modules without explicit top-level anchors (rejected: weak discoverability).
 
-2. Decision: Group integration-facing helpers by concern under `tools/` (`budget.py`, `compliance.py`, `vendor.py`).
-Rationale: Encapsulates external-system interaction surfaces and limits coupling with orchestration code.
+2. Decision: Create folder-level integration boundary under `tools/` now; add per-concern module files in a later implementation change.
+Rationale: Establishes clear ownership without introducing placeholder files before behavior is implemented.
 Alternatives considered:
 - Put integration logic directly in `agent.py` (rejected: orchestration bloat and poor testability).
 - Create one monolithic `tools.py` (rejected: concern mixing and growth risk).
 
-3. Decision: Isolate data loading and access helpers under `data/`.
-Rationale: Separates data-source handling from decision orchestration and integration adapters.
+3. Decision: Establish `data/` as a dedicated folder boundary now; defer concrete loader files until implementation begins.
+Rationale: Separates responsibilities immediately while keeping this phase intentionally light.
 Alternatives considered:
 - Keep loader helpers inside each tool module (rejected: duplication and inconsistent data access patterns).
 
@@ -51,10 +52,10 @@ Alternatives considered:
 
 ## Migration Plan
 
-1. Introduce scaffold files and package directories without altering existing subsystem or OpenSpec trees.
-2. Add baseline tests mapped to scaffold ownership boundaries.
-3. Confirm existing tests still pass and no runtime behavior changed.
-4. Rollback strategy: remove new scaffold files/directories and restore prior layout if tooling or team workflow regressions occur.
+1. Introduce scaffold directories and documentation updates without altering existing subsystem or OpenSpec trees.
+2. Preserve current tests and confirm no runtime behavior changes.
+3. Defer creation of new scaffold module and test files to a later implementation-focused change.
+4. Rollback strategy: remove newly added scaffold directories and documentation changes if workflow regressions occur.
 
 ## Open Questions
 

@@ -4,10 +4,10 @@ The repository has grown around subsystem mocks and OpenSpec artifacts, but the 
 
 ## What Changes
 
-- Define a top-level Python scaffold with explicit ownership boundaries for orchestration, shared models, tool integrations, data loading, and tests.
-- Establish `agent.py` as the primary orchestration entrypoint and `models.py` as the shared data contract module.
-- Introduce package-level structure for integrations under `tools/` and data access utilities under `data/`.
-- Clarify expected test organization under `tests/` for agent and integration helper modules.
+- Define a top-level Python scaffolding layout with explicit ownership boundaries for orchestration, shared models, tool integrations, data loading, and tests.
+- Add folder scaffolding for `tools/`, `data/`, and maintain `tests/` as the test location.
+- Update repository documentation to describe responsibilities, naming conventions, and deferred file creation.
+- Defer creation of missing module and test files (for example `agent.py`, `models.py`, and new scaffold test files) to a later implementation-focused change.
 - Preserve existing `openspec/` and `subsystem/` directory layouts without restructuring.
 
 ## Capabilities
@@ -20,7 +20,8 @@ The repository has grown around subsystem mocks and OpenSpec artifacts, but the 
 
 ## Impact
 
-- Affects project layout expectations for new implementation work in top-level Python modules and packages.
+- Affects project layout expectations and contributor guidance for future implementation work.
 - Influences contributor workflow, code discovery, and future test placement.
 - No runtime business behavior changes to compliance, supplier selection, budgeting, or purchase-order handoff.
+- No creation of new application module files in this change.
 - No changes to `openspec/` or `subsystem/` directory structures.

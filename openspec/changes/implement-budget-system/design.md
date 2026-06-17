@@ -2,7 +2,7 @@
 
 The current repo has implemented compliance and supplier lookup subsystems, while budgeting currently has only mock data and no executable subsystem module. The agent workflow in OpenSpec context already expects a budgeting check before finalizing purchase-order preparation.
 
-This change introduces a budgeting decision component that evaluates a selected supplier contract and request cost against available budget for MVP.
+This change introduces a budgeting decision component that requires `contract_id` for traceability and evaluates `total_cost` against the single shared cost center available budget for MVP.
 
 ## Goals / Non-Goals
 
@@ -44,6 +44,19 @@ This change introduces a budgeting decision component that evaluates a selected 
 - Alternatives considered:
   - Require cost center in every request: rejected as conflicting with stated assumptions.
 
+### Decision 5: Treat `contract_id` as required traceability metadata in MVP
+- Rationale: The current budget data model contains cost-center balances only and does not map contracts to distinct budget buckets. Requiring `contract_id` preserves auditability while avoiding unsupported mapping behavior.
+- Alternatives considered:
+  - Use `contract_id` to select a budget record: rejected for MVP because no mapping data exists in `budgets-db.json`.
+
+### Decision 6: Define deterministic decision boundary and response echoes
+- Rationale: Deterministic budget outcomes improve testability and downstream handoff behavior.
+- Rules:
+  - `allow` when `total_cost <= remaining` for the MVP cost center.
+  - `deny` with `insufficient_budget` when `total_cost > remaining`.
+  - `deny` with `invalid_cost_input` when `total_cost` is missing, non-numeric, non-positive, or unsupported `unit_cost`/`count` fields are present.
+  - Echo `contract_id`, `total_cost`, and selected `cost_center_id` in responses for audit clarity.
+
 ## Risks / Trade-offs
 
 - [Risk] Upstream callers may still send `unit_cost`/`count` payloads from earlier assumptions. -> Mitigation: treat non-`total_cost` formats as unsupported input and return deny with validation reason.
@@ -54,12 +67,11 @@ This change introduces a budgeting decision component that evaluates a selected 
 ## Migration Plan
 
 1. Add `budget-system-lookup` delta spec and update `procurement-handoff` spec for budget gate behavior.
-2. Implement budgeting subsystem module and request/response dataclasses.
-3. Add tests for validation and decision outcomes.
+2. Implement budgeting subsystem module and request/response dataclasses that encode traceability-only `contract_id` semantics.
+3. Add tests for validation matrix, allow/deny boundary conditions, and denial reason outcomes.
 4. Integrate budget evaluation into agent orchestration path (in apply phase).
 5. Rollback plan: disable budgeting gate call path and keep procurement flow at current behavior while retaining artifacts for future re-enable.
 
 ## Open Questions
 
-- Should `allow` include remaining budget after approval as part of response payload in MVP?
 - Should denial reasons be standardized globally across subsystems or remain capability-local initially?

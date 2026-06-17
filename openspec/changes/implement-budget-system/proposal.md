@@ -11,18 +11,19 @@ The requisition workflow currently evaluates compliance and supplier eligibility
 - When decision is `deny`, return explicit machine-readable denial reasons.
 - Apply MVP assumptions that one cost center exists for all requests.
 - Mark contract lookup failure handling as out of scope for this change.
+- Mark procurement handoff integration as out of scope for this change.
 
 ## Capabilities
 
 ### New Capabilities
 - `budget-system-lookup`: Budget decision API behavior for purchase-order eligibility checks using contract ID and `total_cost` input.
 
-### Modified Capabilities
-- `procurement-handoff`: Include budget decision output in handoff eligibility contract so denied requests are blocked from purchase-order generation.
+### Out of Scope Capabilities
+- `procurement-handoff`: Budget-gate integration into handoff behavior is deferred and not included in this change.
 
 ## Impact
 
 - Adds new implementation under `subsystem/budgeting-system/` and uses mock data from `subsystem/budgeting-system/mock/budgets-db.json`.
 - Adds tests for request validation, allow/deny outcomes, and denial-reason coverage.
-- Updates procurement handoff requirements to include budget gate semantics in response behavior.
+- Does not update procurement handoff behavior in this change.
 - No external dependencies required for MVP implementation.

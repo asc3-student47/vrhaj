@@ -78,3 +78,25 @@ In implement-budget-system spec proposal, only allow total cost and remove unit_
 ## 2026-06-17T09:13:00-05:00
 
 Log current session prompts to docs/agent-chat-log_feat-budget.md
+
+## 2026-06-17T09:14:00-05:00
+
+Change log messages to use ISO date format including timezone
+
+## 2026-06-17T09:15:00-05:00
+
+Follow instructions in #prompt:opsx-apply.prompt.md with these arguments: implement-budget-system
+
+## 2026-06-17T09:16:00-05:00
+
+Follow instructions in #prompt:opsx-explore.prompt.md with these arguments: implment-budget-system
+
+Read through openspec proposal for this spec. Mark procurement as out of scope. Adjust proposal as needed.
+
+## 2026-06-17T09:17:00-05:00
+
+Proceed
+
+## 2026-06-17T09:18:00-05:00
+
+Log current session prompts to docs/agent-chat-log_feat-budget.md

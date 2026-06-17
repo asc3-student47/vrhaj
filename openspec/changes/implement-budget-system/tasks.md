@@ -14,4 +14,3 @@
 
 - [ ] 3.1 Add subsystem validation tests for missing, non-numeric, non-positive `total_cost`, and unsupported `unit_cost`/`count` payloads
 - [ ] 3.2 Add subsystem decision tests for boundary conditions (`total_cost == remaining`, `< remaining`, `> remaining`) with deny reason coverage
-- [ ] 3.3 Validate procurement-handoff contract expectations for budget-gate blocking and pass-through of budget denial reason codes

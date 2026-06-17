@@ -18,6 +18,7 @@ This change introduces a budgeting decision component that requires `contract_id
 - Multi-cost-center allocation or budget transfer logic.
 - Currency conversion or mixed-currency support.
 - Persisting purchase-order commitments (this change only evaluates eligibility).
+- Procurement handoff integration and orchestration changes.
 - Contract lookup failure handling (for missing or unresolvable `contract_id`).
 - `unit_cost` and `count` input handling.
 
@@ -66,10 +67,10 @@ This change introduces a budgeting decision component that requires `contract_id
 
 ## Migration Plan
 
-1. Add `budget-system-lookup` delta spec and update `procurement-handoff` spec for budget gate behavior.
+1. Add `budget-system-lookup` delta spec.
 2. Implement budgeting subsystem module and request/response dataclasses that encode traceability-only `contract_id` semantics.
 3. Add tests for validation matrix, allow/deny boundary conditions, and denial reason outcomes.
-4. Integrate budget evaluation into agent orchestration path (in apply phase).
+4. Defer budget evaluation integration into procurement handoff to a future change.
 5. Rollback plan: disable budgeting gate call path and keep procurement flow at current behavior while retaining artifacts for future re-enable.
 
 ## Open Questions

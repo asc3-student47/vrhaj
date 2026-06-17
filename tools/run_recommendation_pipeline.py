@@ -6,12 +6,27 @@ import json
 from pathlib import Path
 import re
 import sys
+from typing import Literal
+
+from pydantic import BaseModel, Field, ValidationError
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TASK3_MODULE_PATH = REPO_ROOT / "subsystem" / "recommendation-agent" / "task3_procurement_handoff.py"
 DEFAULT_COMPLIANCE_DB = REPO_ROOT / "subsystem" / "compliance-system" / "mock" / "tire-compliance-db.json"
 DEFAULT_SUPPLIERS_DB = REPO_ROOT / "subsystem" / "supplier-database" / "mock" / "suppliers-db.json"
+
+
+class ResolvedRequest(BaseModel):
+    tire_size: str = Field(min_length=3)
+    load_index: int = Field(ge=1, le=999)
+    speed_rating: str = Field(min_length=1, max_length=1)
+    region_code: str = Field(min_length=2, max_length=2)
+    quantity_needed: int = Field(ge=1)
+    replacement_urgency: Literal["low", "medium", "high"]
+    application: str = Field(min_length=1)
+    required_certifications: list[str] = Field(min_length=1)
+    include_compliance_summary: bool = False
 
 
 def load_task3_module() -> object:
@@ -129,17 +144,17 @@ def _resolve_inputs(args: argparse.Namespace) -> dict[str, object]:
         extracted.get("include_compliance_summary", False)
     )
 
-    return {
-        "tire_size": str(tire_size),
-        "load_index": int(load_index),
-        "speed_rating": str(speed_rating).upper(),
-        "region_code": str(region_code).upper(),
-        "quantity_needed": int(quantity_needed),
-        "replacement_urgency": str(replacement_urgency),
-        "application": str(application),
-        "required_certifications": list(required_certifications),
-        "include_compliance_summary": include_compliance_summary,
-    }
+    return ResolvedRequest(
+        tire_size=str(tire_size),
+        load_index=int(load_index),
+        speed_rating=str(speed_rating).upper(),
+        region_code=str(region_code).upper(),
+        quantity_needed=int(quantity_needed),
+        replacement_urgency=str(replacement_urgency),
+        application=str(application),
+        required_certifications=list(required_certifications),
+        include_compliance_summary=include_compliance_summary,
+    ).model_dump()
 
 
 def main() -> int:
@@ -149,7 +164,11 @@ def main() -> int:
     if not args.prompt.strip():
         args.prompt = input("Enter tire request prompt: ").strip()
 
-    resolved = _resolve_inputs(args)
+    try:
+        resolved = _resolve_inputs(args)
+    except ValidationError as exc:
+        print(json.dumps({"error": "invalid_request", "details": exc.errors()}, indent=2))
+        return 2
 
     request = task3.SearchRequest(
         tire_size=resolved["tire_size"],

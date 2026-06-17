@@ -1,0 +1,79 @@
+[
+    {
+        "id": "729c7657-0dd4-4099-b6eb-76cd98f7f729",
+        "name": "Michelin",
+        "contracts": [
+            {
+                "contract_id": "MIC-XZE2-2025",
+                "sku": "MIC-XZE2-225-70R19.5-128",
+                "manufacturer": "Michelin",
+                "unit_price": 350.00,
+                "available_quantity": 8500,
+                "lead_time_days": 14,
+                "expiration_date": "2025-12-31"
+            },
+            {
+                "contract_id": "MIC-XZE2-2026",
+                "sku": "MIC-XZE2-225-70R19.5-128",
+                "manufacturer": "Michelin",
+                "unit_price": 350.00,
+                "available_quantity": 8500,
+                "lead_time_days": 14,
+                "expiration_date": "2026-12-31"
+            }
+        ],
+        "preferred": true
+    },
+    {
+        "id": "1509d084-2708-4150-8126-dd6f4e9634dc",
+        "name": "Goodyear",
+        "contracts": [
+            {
+                "contract_id": "GOO-RHG2-2025",
+                "sku": "GDL-RHG2-295-75R22.5-144",
+                "manufacturer": "Goodyear",
+                "unit_price": 350.00,
+                "available_quantity": 10000,
+                "lead_time_days": 14,
+                "expiration_date": "2025-12-31"
+            },
+            {
+                "contract_id": "GOO-RHG2-2026",
+                "sku": "GDL-RHG2-225-70R19.5-128",
+                "manufacturer": "Goodyear",
+                "unit_price": 330.00,
+                "available_quantity": 10000,
+                "lead_time_days": 14,
+                "expiration_date": "2026-12-31"
+            }
+        ],
+        "preferred": true
+    },
+    {
+        "id": "445e287d-26df-4ffe-bf23-bda79b8a9651",
+        "name": "NeedForSpeed Tires",
+        "contracts": [
+            {
+                "contract_id": "NFS-XZE2-2026",
+                "sku": "MIC-XZE2-225-70R19.5-128",
+                "manufacturer": "Michelin",
+                "unit_price": 350.00,
+                "available_quantity": 500,
+                "lead_time_days": 14,
+                "expiration_date": "2026-12-31"
+            },
+            {
+                "contract_id": "NFS-XZE2-2026",
+                "sku": "GOO-XZE2-225-70R19.5-128",
+                "manufacturer": "Goodyear",
+                "unit_price": 350.00,
+                "available_quantity": 1000,
+                "lead_time_days": 14,
+                "expiration_date": "2026-12-31",
+                "expedited_lead_time_days": 3,
+                "expedited_price": 400.00
+            }
+        ],
+        "preferred": false
+    }
+]

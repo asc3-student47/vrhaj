@@ -5,6 +5,9 @@ from pathlib import Path
 import importlib.util
 import json
 import sys
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 
 
 # Traceability references for task 3 implementation.
@@ -47,6 +50,93 @@ class SearchRequest:
     include_compliance_summary: bool = False
     required_certifications: list[str] | None = None
     application: str | None = None
+
+
+class DecisionEvidence(BaseModel):
+    source: str = Field(min_length=1)
+    detail: str = Field(min_length=1)
+    traceability_ref: str | None = None
+
+
+class ComplianceSummary(BaseModel):
+    failed_rules: list[str]
+    reasons: list[str]
+    policy_version: str = Field(min_length=1)
+    evaluated_at_utc: str | None = None
+    traceability_refs: list[str]
+
+
+class MatchResultItem(BaseModel):
+    sku: str = Field(min_length=1)
+    score: float = Field(ge=0.0)
+    stock_qty: int = Field(ge=0)
+    lead_time_days: int = Field(ge=0)
+    unit_price: float = Field(ge=0.0)
+    compliance_status: Literal["compliant"]
+    fulfillment_rationale: str = Field(min_length=1)
+    traceability_refs: list[str]
+    compliance_summary: ComplianceSummary | None = None
+
+
+class MatchRequest(BaseModel):
+    tire_size: str = Field(min_length=3)
+    load_index: int = Field(ge=1)
+    speed_rating: str = Field(min_length=1, max_length=1)
+    region_code: str = Field(min_length=2, max_length=2)
+    quantity_needed: int = Field(ge=1)
+
+    @field_validator("speed_rating")
+    @classmethod
+    def normalize_speed_rating(cls, value: str) -> str:
+        return value.upper()
+
+    @field_validator("region_code")
+    @classmethod
+    def normalize_region_code(cls, value: str) -> str:
+        return value.upper()
+
+
+class MatchResponse(BaseModel):
+    status: Literal["match"]
+    decision: Literal["approve"]
+    rationale: str = Field(min_length=1)
+    evidence: list[DecisionEvidence] = Field(min_length=1)
+    request: MatchRequest
+    results: list[MatchResultItem] = Field(min_length=1)
+    ranking_rule: str = Field(min_length=1)
+    traceability_refs: list[str]
+
+
+class NoMatchResponse(BaseModel):
+    status: Literal["no_match"]
+    decision: Literal["deny", "escalate"]
+    rationale: str = Field(min_length=1)
+    evidence: list[DecisionEvidence] = Field(min_length=1)
+    request: MatchRequest
+    reason_codes: list[str] = Field(min_length=1)
+    suggested_relaxations: list[str]
+    traceability_refs: list[str]
+
+    @field_validator("reason_codes")
+    @classmethod
+    def reason_codes_must_be_non_empty_strings(cls, values: list[str]) -> list[str]:
+        normalized = [value.strip().upper() for value in values if value.strip()]
+        if not normalized:
+            raise ValueError("reason_codes must contain at least one non-empty code")
+        return normalized
+
+    @model_validator(mode="after")
+    def enforce_escalation_consistency(self) -> "NoMatchResponse":
+        has_human_review = "REQUIRES_HUMAN_REVIEW" in self.reason_codes
+        if has_human_review and self.decision != "escalate":
+            raise ValueError("REQUIRES_HUMAN_REVIEW requires decision=escalate")
+        if not has_human_review and self.decision != "deny":
+            raise ValueError("no_match without human review should set decision=deny")
+        return self
+
+
+SearchResponse = Annotated[MatchResponse | NoMatchResponse, Field(discriminator="status")]
+SEARCH_RESPONSE_ADAPTER = TypeAdapter(SearchResponse)
 
 
 def _load_supplier_contracts_by_sku(suppliers_db_path: str | Path) -> dict[str, dict[str, float]]:
@@ -127,6 +217,52 @@ def _suggested_relaxations(reason_codes: list[str]) -> list[str]:
     return suggestions
 
 
+def _build_match_evidence(preprocess_result: object, ranked_items: list[dict[str, object]]) -> list[DecisionEvidence]:
+    evidence: list[DecisionEvidence] = [
+        DecisionEvidence(
+            source="ranking",
+            detail=f"{len(ranked_items)} compliant in-stock candidate(s) satisfy requested quantity",
+            traceability_ref=TRACEABILITY_RANKING,
+        )
+    ]
+
+    top = ranked_items[0] if ranked_items else None
+    if top is not None:
+        evidence.append(
+            DecisionEvidence(
+                source="top_candidate",
+                detail=f"top SKU {top['sku']} selected by deterministic ranking and fulfillment preference",
+                traceability_ref=TRACEABILITY_FILTERING,
+            )
+        )
+
+    if getattr(preprocess_result, "auto_recommendation_blocked", False):
+        evidence.append(
+            DecisionEvidence(
+                source="compliance",
+                detail="policy precedence ambiguity detected in preprocessing",
+                traceability_ref=TRACEABILITY_CONDITIONAL_COMPLIANCE,
+            )
+        )
+    return evidence
+
+
+def _build_no_match_evidence(reason_codes: list[str]) -> list[DecisionEvidence]:
+    detail = "no candidate satisfies required fitment, compliance, and availability constraints"
+    if "INSUFFICIENT_AVAILABILITY" in reason_codes:
+        detail = "candidates exist but none can satisfy quantity at current availability/lead constraints"
+    if "REQUIRES_HUMAN_REVIEW" in reason_codes:
+        detail = "request requires manual compliance resolution before recommendation can proceed"
+
+    return [
+        DecisionEvidence(
+            source="no_match_analysis",
+            detail=detail,
+            traceability_ref=TRACEABILITY_NO_MATCH,
+        )
+    ]
+
+
 def search_inventory(
     compliance_db_path: str | Path,
     suppliers_db_path: str | Path,
@@ -202,43 +338,48 @@ def search_inventory(
 
         ranked_items.append(item)
 
+    request_payload = MatchRequest(
+        tire_size=request.tire_size,
+        load_index=request.load_index,
+        speed_rating=request.speed_rating,
+        region_code=request.region_code,
+        quantity_needed=request.quantity_needed,
+    )
+
     if ranked_items:
-        return {
-            "status": "match",
-            "request": {
-                "tire_size": request.tire_size,
-                "load_index": request.load_index,
-                "speed_rating": request.speed_rating,
-                "region_code": request.region_code,
-                "quantity_needed": request.quantity_needed,
-            },
-            "results": ranked_items,
-            "ranking_rule": ranking.tie_break_rule,
-            "traceability_refs": [
+        response = MatchResponse(
+            status="match",
+            decision="approve",
+            rationale="compliant and fulfillable inventory options were found and ranked deterministically",
+            evidence=_build_match_evidence(preprocess_result, ranked_items),
+            request=request_payload,
+            results=[MatchResultItem.model_validate(item) for item in ranked_items],
+            ranking_rule=ranking.tie_break_rule,
+            traceability_refs=[
                 TRACEABILITY_FILTERING,
                 TRACEABILITY_RANKING,
                 TRACEABILITY_CONDITIONAL_COMPLIANCE,
             ],
-        }
+        )
+        return SEARCH_RESPONSE_ADAPTER.validate_python(response).model_dump(exclude_none=True)
 
     reason_codes = _build_reason_codes(
         ranked_count=len(ranking.ranked_candidates),
         inventory_filtered_count=len(ranked_items),
         preprocess_result=preprocess_result,
     )
-    return {
-        "status": "no_match",
-        "request": {
-            "tire_size": request.tire_size,
-            "load_index": request.load_index,
-            "speed_rating": request.speed_rating,
-            "region_code": request.region_code,
-            "quantity_needed": request.quantity_needed,
-        },
-        "reason_codes": reason_codes,
-        "suggested_relaxations": _suggested_relaxations(reason_codes),
-        "traceability_refs": [
+    decision = "escalate" if "REQUIRES_HUMAN_REVIEW" in reason_codes else "deny"
+    response = NoMatchResponse(
+        status="no_match",
+        decision=decision,
+        rationale="no inventory option currently satisfies all mandatory constraints",
+        evidence=_build_no_match_evidence(reason_codes),
+        request=request_payload,
+        reason_codes=reason_codes,
+        suggested_relaxations=_suggested_relaxations(reason_codes),
+        traceability_refs=[
             TRACEABILITY_FILTERING,
             TRACEABILITY_NO_MATCH,
         ],
-    }
+    )
+    return SEARCH_RESPONSE_ADAPTER.validate_python(response).model_dump(exclude_none=True)

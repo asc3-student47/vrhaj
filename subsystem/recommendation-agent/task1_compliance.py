@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 import importlib.util
 import json
 import sys
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # Traceability references for task 1 implementation.
@@ -32,8 +33,7 @@ ComplianceRequest = _compliance_system.ComplianceRequest
 evaluate_request = _compliance_system.evaluate_request
 
 
-@dataclass(frozen=True)
-class PreprocessRequest:
+class PreprocessRequest(BaseModel):
     tire_size: str | None = None
     min_load_index: int | None = None
     min_speed_rating: str | None = None
@@ -44,24 +44,69 @@ class PreprocessRequest:
     # are treated as unresolved precedence and escalated for human review.
     company_policy_region_allowlist: list[str] | None = None
 
+    @field_validator("min_speed_rating")
+    @classmethod
+    def normalize_speed_rating(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return value.strip().upper()
 
-@dataclass(frozen=True)
-class CandidateCompliance:
-    sku: str
+    @field_validator("region_code")
+    @classmethod
+    def normalize_region_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return value.strip().upper()
+
+    @field_validator("required_certifications", "company_policy_region_allowlist")
+    @classmethod
+    def normalize_list_values(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return value
+        normalized = [item.strip().upper() for item in value if item and item.strip()]
+        return normalized or None
+
+
+class ComplianceEvidence(BaseModel):
+    rule: str = Field(min_length=1)
+    detail: str = Field(min_length=1)
+    traceability_ref: str | None = None
+
+
+class CandidateCompliance(BaseModel):
+    sku: str = Field(min_length=1)
     eligible: bool
     requires_human_review: bool
-    failed_rules: list[str]
-    reasons: list[str]
-    policy_version: str
-    evaluated_at_utc: str
-    traceability_refs: list[str]
+    failed_rules: list[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
+    policy_version: str = Field(min_length=1)
+    evaluated_at_utc: str = Field(min_length=1)
+    traceability_refs: list[str] = Field(min_length=1)
+    evidence: list[ComplianceEvidence] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def enforce_state_consistency(self) -> "CandidateCompliance":
+        if self.requires_human_review and self.eligible:
+            raise ValueError("requires_human_review=true cannot be eligible")
+        if not self.eligible and (not self.failed_rules or not self.reasons):
+            raise ValueError("non-eligible candidates must include failed_rules and reasons")
+        if self.requires_human_review and "policy_precedence" not in self.failed_rules:
+            raise ValueError("human review candidates must include policy_precedence failed rule")
+        return self
 
 
-@dataclass(frozen=True)
-class PreprocessResult:
+class PreprocessResult(BaseModel):
     eligible_skus: list[str]
-    compliance_results: list[CandidateCompliance]
+    compliance_results: list[CandidateCompliance] = Field(default_factory=list)
     auto_recommendation_blocked: bool
+
+    @model_validator(mode="after")
+    def validate_aggregate_consistency(self) -> "PreprocessResult":
+        if self.auto_recommendation_blocked and not any(
+            item.requires_human_review for item in self.compliance_results
+        ):
+            raise ValueError("auto_recommendation_blocked requires at least one human-review candidate")
+        return self
 
 
 def load_supplier_skus(suppliers_db_path: str | Path) -> list[str]:
@@ -99,6 +144,26 @@ def _build_traceability_refs(
     if include_ambiguity:
         refs.append(TRACEABILITY_AMBIGUITY)
     return refs
+
+
+def _build_candidate_evidence(
+    failed_rules: list[str],
+    reasons: list[str],
+    traceability_refs: list[str],
+) -> list[ComplianceEvidence]:
+    fallback_ref = traceability_refs[0] if traceability_refs else None
+    evidence: list[ComplianceEvidence] = []
+    for index, reason in enumerate(reasons):
+        rule = failed_rules[index] if index < len(failed_rules) else "compliance_evaluation"
+        trace_ref = traceability_refs[min(index, len(traceability_refs) - 1)] if traceability_refs else fallback_ref
+        evidence.append(
+            ComplianceEvidence(
+                rule=rule,
+                detail=reason,
+                traceability_ref=trace_ref,
+            )
+        )
+    return evidence
 
 
 def _company_policy_conflicts_with_legal(
@@ -157,6 +222,7 @@ def preprocess_candidates_with_compliance(
         if eligible:
             eligible_skus.append(sku)
 
+        traceability_refs = _build_traceability_refs(has_ambiguity)
         results.append(
             CandidateCompliance(
                 sku=sku,
@@ -166,7 +232,8 @@ def preprocess_candidates_with_compliance(
                 reasons=reasons,
                 policy_version=policy_version,
                 evaluated_at_utc=evaluated_at,
-                traceability_refs=_build_traceability_refs(has_ambiguity),
+                traceability_refs=traceability_refs,
+                evidence=_build_candidate_evidence(failed_rules, reasons, traceability_refs),
             )
         )
 

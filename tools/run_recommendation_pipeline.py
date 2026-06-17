@@ -8,9 +8,9 @@ import os
 from pathlib import Path
 import sys
 import time
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 from dotenv import load_dotenv
 
 
@@ -53,6 +53,66 @@ class PromptExtraction(BaseModel):
     application: str | None = None
     required_certifications: list[str] = Field(default_factory=list)
     include_compliance_summary: bool = False
+
+
+class DecisionEvidence(BaseModel):
+    source: str = Field(min_length=1)
+    detail: str = Field(min_length=1)
+    traceability_ref: str | None = None
+
+
+class MatchRequestPayload(BaseModel):
+    tire_size: str = Field(min_length=3)
+    load_index: int = Field(ge=1)
+    speed_rating: str = Field(min_length=1, max_length=1)
+    region_code: str = Field(min_length=2, max_length=2)
+    quantity_needed: int = Field(ge=1)
+
+
+class ComplianceSummaryPayload(BaseModel):
+    failed_rules: list[str]
+    reasons: list[str]
+    policy_version: str = Field(min_length=1)
+    evaluated_at_utc: str | None = None
+    traceability_refs: list[str]
+
+
+class MatchResultPayload(BaseModel):
+    sku: str = Field(min_length=1)
+    score: float = Field(ge=0)
+    stock_qty: int = Field(ge=0)
+    lead_time_days: int = Field(ge=0)
+    unit_price: float = Field(ge=0)
+    compliance_status: Literal["compliant"]
+    fulfillment_rationale: str = Field(min_length=1)
+    traceability_refs: list[str]
+    compliance_summary: ComplianceSummaryPayload | None = None
+
+
+class MatchResponsePayload(BaseModel):
+    status: Literal["match"]
+    decision: Literal["approve"]
+    rationale: str = Field(min_length=1)
+    evidence: list[DecisionEvidence] = Field(min_length=1)
+    request: MatchRequestPayload
+    results: list[MatchResultPayload] = Field(min_length=1)
+    ranking_rule: str = Field(min_length=1)
+    traceability_refs: list[str]
+
+
+class NoMatchResponsePayload(BaseModel):
+    status: Literal["no_match"]
+    decision: Literal["deny", "escalate"]
+    rationale: str = Field(min_length=1)
+    evidence: list[DecisionEvidence] = Field(min_length=1)
+    request: MatchRequestPayload
+    reason_codes: list[str] = Field(min_length=1)
+    suggested_relaxations: list[str]
+    traceability_refs: list[str]
+
+
+SearchResponsePayload = Annotated[MatchResponsePayload | NoMatchResponsePayload, Field(discriminator="status")]
+SEARCH_RESPONSE_ADAPTER = TypeAdapter(SearchResponsePayload)
 
 
 def load_task3_module() -> object:
@@ -325,9 +385,11 @@ def _process_prompt(
             str(resolved["replacement_urgency"]),
         )
 
+    validated_response = SEARCH_RESPONSE_ADAPTER.validate_python(response).model_dump(exclude_none=True)
+
     output = {
         "resolved_request": resolved,
-        "response": response,
+        "response": validated_response,
         "supplier_lookup": supplier_lookup,
     }
     elapsed_ms = round((time.perf_counter() - started) * 1000, 2)

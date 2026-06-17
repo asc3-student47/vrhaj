@@ -147,10 +147,10 @@ def test_task2_returns_weighted_component_score_breakdown() -> None:
 
     assert result.ranked_candidates
     top = result.ranked_candidates[0]
-    assert "availability" in top.component_scores
-    assert "lifecycle_cost" in top.component_scores
-    assert "fuel_impact" in top.component_scores
-    assert "warranty_quality" in top.component_scores
+    assert top.component_scores.availability >= 0.0
+    assert top.component_scores.lifecycle_cost >= 0.0
+    assert top.component_scores.fuel_impact >= 0.0
+    assert top.component_scores.warranty_quality >= 0.0
     assert top.total_score >= 0.0
 
 

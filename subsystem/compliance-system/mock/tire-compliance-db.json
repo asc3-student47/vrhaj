@@ -9,7 +9,6 @@
         "load_range": "G",
         "application": "Regional delivery",
         "position": "All-position",
-        "unit_price_usd": 428,
         "estimated_mileage": 105000,
         "certifications": [
             "US-DOT",
@@ -32,7 +31,6 @@
         "load_range": "H",
         "application": "Regional delivery",
         "position": "All-position",
-        "unit_price_usd": 512,
         "estimated_mileage": 118000,
         "certifications": [
             "US-DOT"
@@ -54,7 +52,6 @@
         "load_range": "G",
         "application": "Long-haul",
         "position": "Drive",
-        "unit_price_usd": 468,
         "estimated_mileage": 132000,
         "certifications": [
             "US-DOT",

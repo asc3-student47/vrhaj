@@ -26,6 +26,12 @@ Start the interactive agent prompt flow:
 python run_recommendation_pipeline.py
 ```
 
+Show full tool trajectory output for a run:
+
+```bash
+python run_recommendation_pipeline.py --show-trajectory
+```
+
 At startup, the agent greets the user, prints an example prompt, and asks for a tire request.
 
 Example prompt:
@@ -57,6 +63,8 @@ python run_recommendation_ui.py
 ```
 
 Then open `http://127.0.0.1:8765` in your browser.
+
+In the UI, enable `Include trajectory` to return detailed tool-call records per request.
 
 The UI calls the same agent pipeline used by CLI mode, and each request is logged in the server console.
 

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 import json
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 
 # Traceability references for task 2 implementation.
@@ -25,30 +27,49 @@ DEFAULT_WEIGHTS = {
 }
 
 
-@dataclass(frozen=True)
-class ScoringRequest:
-    quantity_needed: int
-    replacement_urgency: str
+class ScoringRequest(BaseModel):
+    quantity_needed: int = Field(ge=1)
+    replacement_urgency: Literal["low", "medium", "high"]
     weights: dict[str, float] | None = None
 
 
-@dataclass(frozen=True)
-class ScoredCandidate:
-    sku: str
-    total_score: float
-    component_scores: dict[str, float]
-    fulfillment_score: float
-    fulfillment_rationale: str
-    lead_time_days: int
-    unit_price: float
-    traceability_refs: list[str]
+class ScoreComponents(BaseModel):
+    availability: float = Field(ge=0.0, le=1.0)
+    lifecycle_cost: float = Field(ge=0.0, le=1.0)
+    fuel_impact: float = Field(ge=0.0, le=1.0)
+    warranty_quality: float = Field(ge=0.0, le=1.0)
 
 
-@dataclass(frozen=True)
-class RankingResult:
-    ranked_candidates: list[ScoredCandidate]
-    excluded_skus: list[str]
-    tie_break_rule: str
+class ScoringEvidence(BaseModel):
+    source: str = Field(min_length=1)
+    detail: str = Field(min_length=1)
+    traceability_ref: str | None = None
+
+
+class ScoredCandidate(BaseModel):
+    sku: str = Field(min_length=1)
+    total_score: float = Field(ge=0.0)
+    component_scores: ScoreComponents
+    fulfillment_score: float = Field(ge=0.0, le=1.0)
+    fulfillment_rationale: str = Field(min_length=1)
+    lead_time_days: int = Field(ge=0)
+    unit_price: float = Field(ge=0.0)
+    traceability_refs: list[str] = Field(min_length=1)
+    evidence: list[ScoringEvidence] = Field(min_length=1)
+
+    @field_validator("traceability_refs")
+    @classmethod
+    def traceability_refs_must_be_non_empty(cls, value: list[str]) -> list[str]:
+        normalized = [item.strip() for item in value if item.strip()]
+        if not normalized:
+            raise ValueError("traceability_refs must include at least one value")
+        return normalized
+
+
+class RankingResult(BaseModel):
+    ranked_candidates: list[ScoredCandidate] = Field(default_factory=list)
+    excluded_skus: list[str] = Field(default_factory=list)
+    tie_break_rule: str = Field(min_length=1)
 
 
 def _load_json_array(path: str | Path, label: str) -> list[dict]:
@@ -181,7 +202,7 @@ def _tie_break_key(candidate: ScoredCandidate) -> tuple[float, float, float, int
     return (
         candidate.total_score,
         candidate.fulfillment_score,
-        candidate.component_scores["availability"],
+        candidate.component_scores.availability,
         -candidate.lead_time_days,
         -candidate.unit_price,
         "".join(chr(255 - ord(c)) for c in candidate.sku),
@@ -258,14 +279,16 @@ def rank_compliant_candidates(
         cost_per_mile = float(candidate["cost_per_mile"])
         lifecycle_cost_score = 0.0 if cost_per_mile == float("inf") else max(0.0, 1.0 - (cost_per_mile / max_valid_cost))
 
-        component_scores = {
-            "availability": float(candidate["availability_score"]),
-            "lifecycle_cost": lifecycle_cost_score,
-            "fuel_impact": float(candidate["fuel_impact_score"]),
-            "warranty_quality": float(candidate["warranty_quality_score"]),
-        }
+        component_scores = ScoreComponents(
+            availability=float(candidate["availability_score"]),
+            lifecycle_cost=lifecycle_cost_score,
+            fuel_impact=float(candidate["fuel_impact_score"]),
+            warranty_quality=float(candidate["warranty_quality_score"]),
+        )
 
-        weighted_score = sum(component_scores[name] * weight for name, weight in weights.items())
+        weighted_score = sum(
+            getattr(component_scores, name) * weight for name, weight in weights.items()
+        )
 
         # Fulfillment preference is applied as an additive preference term
         # after weighted objective scoring.
@@ -285,6 +308,18 @@ def rank_compliant_candidates(
                     TRACEABILITY_WEIGHTED_SCORING,
                     TRACEABILITY_FULFILLMENT,
                     TRACEABILITY_TIE_BREAK,
+                ],
+                evidence=[
+                    ScoringEvidence(
+                        source="weighted_scoring",
+                        detail="candidate score calculated from weighted component objectives",
+                        traceability_ref=TRACEABILITY_WEIGHTED_SCORING,
+                    ),
+                    ScoringEvidence(
+                        source="fulfillment_preference",
+                        detail=str(candidate["fulfillment_rationale"]),
+                        traceability_ref=TRACEABILITY_FULFILLMENT,
+                    ),
                 ],
             )
         )

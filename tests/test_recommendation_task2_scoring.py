@@ -5,6 +5,9 @@ import json
 from pathlib import Path
 import sys
 
+import pytest
+from pydantic import ValidationError
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TASK1_MODULE_PATH = REPO_ROOT / "subsystem" / "recommendation-agent" / "task1_compliance.py"
@@ -30,6 +33,7 @@ preprocess_candidates_with_compliance = task1_compliance.preprocess_candidates_w
 
 ScoringRequest = task2_recommendation.ScoringRequest
 rank_compliant_candidates = task2_recommendation.rank_compliant_candidates
+ScoredCandidate = task2_recommendation.ScoredCandidate
 
 
 def _write_json(path: Path, payload: list[dict]) -> None:
@@ -147,10 +151,10 @@ def test_task2_returns_weighted_component_score_breakdown() -> None:
 
     assert result.ranked_candidates
     top = result.ranked_candidates[0]
-    assert "availability" in top.component_scores
-    assert "lifecycle_cost" in top.component_scores
-    assert "fuel_impact" in top.component_scores
-    assert "warranty_quality" in top.component_scores
+    assert top.component_scores.availability >= 0.0
+    assert top.component_scores.lifecycle_cost >= 0.0
+    assert top.component_scores.fuel_impact >= 0.0
+    assert top.component_scores.warranty_quality >= 0.0
     assert top.total_score >= 0.0
 
 
@@ -264,3 +268,75 @@ def test_task2_tie_breaking_is_deterministic_across_runs(tmp_path: Path) -> None
 
     assert first_order == second_order
     assert first_order == ["AAA-SKU", "BBB-SKU"]
+
+
+def test_task2_scored_candidate_rejects_negative_total_score() -> None:
+    with pytest.raises(ValidationError):
+        ScoredCandidate(
+            sku="SKU-NEG",
+            total_score=-0.1,
+            component_scores={
+                "availability": 0.8,
+                "lifecycle_cost": 0.7,
+                "fuel_impact": 0.9,
+                "warranty_quality": 0.8,
+            },
+            fulfillment_score=1.0,
+            fulfillment_rationale="fulfillable",
+            lead_time_days=3,
+            unit_price=100.0,
+            traceability_refs=[task2_recommendation.TRACEABILITY_WEIGHTED_SCORING],
+            evidence=[
+                {
+                    "source": "weighted_scoring",
+                    "detail": "score calculation",
+                    "traceability_ref": task2_recommendation.TRACEABILITY_WEIGHTED_SCORING,
+                }
+            ],
+        )
+
+
+def test_task2_scored_candidate_rejects_empty_traceability_refs() -> None:
+    with pytest.raises(ValidationError):
+        ScoredCandidate(
+            sku="SKU-NO-TRACE",
+            total_score=0.8,
+            component_scores={
+                "availability": 0.8,
+                "lifecycle_cost": 0.7,
+                "fuel_impact": 0.9,
+                "warranty_quality": 0.8,
+            },
+            fulfillment_score=1.0,
+            fulfillment_rationale="fulfillable",
+            lead_time_days=3,
+            unit_price=100.0,
+            traceability_refs=[],
+            evidence=[
+                {
+                    "source": "weighted_scoring",
+                    "detail": "score calculation",
+                    "traceability_ref": task2_recommendation.TRACEABILITY_WEIGHTED_SCORING,
+                }
+            ],
+        )
+
+
+def test_task2_scored_candidate_rejects_empty_evidence() -> None:
+    with pytest.raises(ValidationError):
+        ScoredCandidate(
+            sku="SKU-NO-EVIDENCE",
+            total_score=0.8,
+            component_scores={
+                "availability": 0.8,
+                "lifecycle_cost": 0.7,
+                "fuel_impact": 0.9,
+                "warranty_quality": 0.8,
+            },
+            fulfillment_score=1.0,
+            fulfillment_rationale="fulfillable",
+            lead_time_days=3,
+            unit_price=100.0,
+            traceability_refs=[task2_recommendation.TRACEABILITY_WEIGHTED_SCORING],
+            evidence=[],
+        )

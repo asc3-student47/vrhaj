@@ -8,6 +8,7 @@ This repository now includes an OpenSpec spec-driven workflow under `openspec/`.
 ### Active proposal
 
 - `openspec/changes/introduce-openspec-flow/proposal.md`
+- `openspec/changes/project-structure-scaffolding-update/proposal.md`
 
 ### Workflow commands
 
@@ -72,6 +73,8 @@ Set `PROCUREMENT_AGENT_MODEL` if you want to override the default model.
 
 ### Repository structure
 
+Current structure:
+
 ```text
 copilot-instructions.md
 docs/
@@ -99,4 +102,39 @@ subsystem/
 └── supplier-system/
 ```
 
-Note: `procurement-handoff` is currently a planned capability in specs and may be out of scope for some implementation changes.
+Scaffold target from `project-structure-scaffolding-update` (directory-only now, with planned top-level file locations):
+
+```text
+fleet-tire-manager/
+├── data/
+├── tests/
+├── tools/
+├── agent.py                       # planned location
+├── models.py                      # planned location
+├── docs/
+│   ├── agent-chat-log.md
+│   └── explore-status-lifecycle.md
+├── openspec/                      # unchanged
+│   ├── config.yaml
+│   ├── changes/
+│   └── specs/
+└── subsystem/                     # unchanged
+    ├── budgeting-system/
+    ├── compliance-system/
+    └── supplier-database/
+```
+
+### Module ownership (planned files)
+
+- `agent.py`: Planned main orchestration entrypoint for requisition flow.
+- `models.py`: Planned shared contracts and domain data models reused across modules.
+- `tools/`: Integration-facing helper directory grouped by concern.
+- `data/`: Shared data loading utility directory.
+- `tests/`: Test directory for scaffold and behavior coverage.
+
+### Naming guidance
+
+- Add one tool module per integration concern later (for example `tools/<concern>.py`).
+- Keep helper modules focused on one subsystem boundary.
+- Place reusable data access helpers under `data/` as files are introduced.
+- Keep orchestration flow in `agent.py` when that file is introduced.

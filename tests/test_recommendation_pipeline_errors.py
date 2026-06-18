@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 import importlib.util
@@ -7,7 +7,7 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = REPO_ROOT / "tools" / "run_recommendation_pipeline.py"
+MODULE_PATH = REPO_ROOT / "run_recommendation_pipeline.py"
 
 
 spec = importlib.util.spec_from_file_location("run_recommendation_pipeline", MODULE_PATH)

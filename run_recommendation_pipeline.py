@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 from datetime import date, datetime
@@ -8,10 +8,10 @@ import os
 from pathlib import Path
 import sys
 import time
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 from dotenv import load_dotenv
 
 
@@ -53,6 +53,7 @@ def _console_tool_log(
 
 
 class ResolvedRequest(BaseModel):
+    sku: str | None = None
     tire_size: str = Field(min_length=3)
     load_index: int = Field(ge=1, le=999)
     speed_rating: str = Field(min_length=1, max_length=1)
@@ -65,6 +66,7 @@ class ResolvedRequest(BaseModel):
 
 
 class PromptExtraction(BaseModel):
+    sku: str | None = None
     tire_size: str | None = None
     load_index: int | None = None
     speed_rating: str | None = None
@@ -103,6 +105,66 @@ class ParseRequestToolInput(BaseModel):
 
 class ParseRequestToolOutput(BaseModel):
     resolved_request: ResolvedRequest
+
+
+class DecisionEvidence(BaseModel):
+    source: str = Field(min_length=1)
+    detail: str = Field(min_length=1)
+    traceability_ref: str | None = None
+
+
+class MatchRequestPayload(BaseModel):
+    tire_size: str = Field(min_length=3)
+    load_index: int = Field(ge=1)
+    speed_rating: str = Field(min_length=1, max_length=1)
+    region_code: str = Field(min_length=2, max_length=2)
+    quantity_needed: int = Field(ge=1)
+
+
+class ComplianceSummaryPayload(BaseModel):
+    failed_rules: list[str]
+    reasons: list[str]
+    policy_version: str = Field(min_length=1)
+    evaluated_at_utc: str | None = None
+    traceability_refs: list[str]
+
+
+class MatchResultPayload(BaseModel):
+    sku: str = Field(min_length=1)
+    score: float = Field(ge=0)
+    stock_qty: int = Field(ge=0)
+    lead_time_days: int = Field(ge=0)
+    unit_price: float = Field(ge=0)
+    compliance_status: Literal["compliant"]
+    fulfillment_rationale: str = Field(min_length=1)
+    traceability_refs: list[str]
+    compliance_summary: ComplianceSummaryPayload | None = None
+
+
+class MatchResponsePayload(BaseModel):
+    status: Literal["match"]
+    decision: Literal["approve"]
+    rationale: str = Field(min_length=1)
+    evidence: list[DecisionEvidence] = Field(min_length=1)
+    request: MatchRequestPayload
+    results: list[MatchResultPayload] = Field(min_length=1)
+    ranking_rule: str = Field(min_length=1)
+    traceability_refs: list[str]
+
+
+class NoMatchResponsePayload(BaseModel):
+    status: Literal["no_match"]
+    decision: Literal["deny", "escalate"]
+    rationale: str = Field(min_length=1)
+    evidence: list[DecisionEvidence] = Field(min_length=1)
+    request: MatchRequestPayload
+    reason_codes: list[str] = Field(min_length=1)
+    suggested_relaxations: list[str]
+    traceability_refs: list[str]
+
+
+SearchResponsePayload = Annotated[MatchResponsePayload | NoMatchResponsePayload, Field(discriminator="status")]
+SEARCH_RESPONSE_ADAPTER = TypeAdapter(SearchResponsePayload)
 
 
 class RecommendationRankingToolInput(BaseModel):
@@ -150,6 +212,19 @@ class FinalizeDecisionToolOutput(BaseModel):
     final_decision: FinalDecision
 
 
+class InvalidRequestError(Exception):
+    def __init__(self, payload: dict[str, object]) -> None:
+        super().__init__(str(payload.get("reason", "invalid_request")))
+        self.payload = payload
+
+
+class SchemaValidationError(Exception):
+    def __init__(self, source: str, details: object) -> None:
+        super().__init__(source)
+        self.source = source
+        self.details = details
+
+
 def load_task3_module() -> object:
     spec = importlib.util.spec_from_file_location("task3_procurement_handoff", TASK3_MODULE_PATH)
     if spec is None or spec.loader is None:
@@ -179,6 +254,7 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Free-text request. Example: 'Need 24 tires size 225/70R19.5 load index 120 speed rating K in TX urgency medium'",
     )
+    parser.add_argument("--sku", default="")
     parser.add_argument("--tire-size", default="")
     parser.add_argument("--load-index", type=int, default=0)
     parser.add_argument("--speed-rating", default="")
@@ -216,6 +292,7 @@ def parse_args() -> argparse.Namespace:
 def build_runtime_args(
     *,
     prompt: str = "",
+    sku: str = "",
     tire_size: str = "",
     load_index: int = 0,
     speed_rating: str = "",
@@ -234,6 +311,7 @@ def build_runtime_args(
 ) -> argparse.Namespace:
     return argparse.Namespace(
         prompt=prompt,
+        sku=sku,
         tire_size=tire_size,
         load_index=load_index,
         speed_rating=speed_rating,
@@ -253,11 +331,12 @@ def build_runtime_args(
 
 
 def _merge_with_cli_overrides(args: argparse.Namespace, extracted: PromptExtraction) -> dict[str, object]:
-    tire_size = args.tire_size or extracted.tire_size or "225/70R19.5"
-    load_index = args.load_index or extracted.load_index or 120
-    speed_rating = args.speed_rating or extracted.speed_rating or "K"
-    region_code = args.region_code or extracted.region_code or "TX"
-    quantity_needed = args.quantity_needed or extracted.quantity_needed or 24
+    sku = args.sku or extracted.sku
+    tire_size = args.tire_size or extracted.tire_size
+    load_index = args.load_index or extracted.load_index
+    speed_rating = args.speed_rating or extracted.speed_rating
+    region_code = args.region_code or extracted.region_code
+    quantity_needed = args.quantity_needed or extracted.quantity_needed
     replacement_urgency = args.replacement_urgency or extracted.replacement_urgency or "medium"
     application = args.application or extracted.application or "Regional delivery"
 
@@ -265,17 +344,18 @@ def _merge_with_cli_overrides(args: argparse.Namespace, extracted: PromptExtract
     required_certifications = cli_certs or extracted.required_certifications or ["US-DOT"]
     include_compliance_summary = args.include_compliance_summary or extracted.include_compliance_summary
 
-    return ResolvedRequest(
-        tire_size=str(tire_size),
-        load_index=int(load_index),
-        speed_rating=str(speed_rating).upper(),
-        region_code=str(region_code).upper(),
-        quantity_needed=int(quantity_needed),
-        replacement_urgency=str(replacement_urgency),
-        application=str(application),
-        required_certifications=list(required_certifications),
-        include_compliance_summary=bool(include_compliance_summary),
-    ).model_dump()
+    return {
+        "sku": str(sku).strip().upper() if sku else None,
+        "tire_size": str(tire_size).strip() if tire_size else None,
+        "load_index": int(load_index) if load_index is not None else None,
+        "speed_rating": str(speed_rating).strip().upper() if speed_rating else None,
+        "region_code": str(region_code).strip().upper() if region_code else None,
+        "quantity_needed": int(quantity_needed) if quantity_needed is not None else None,
+        "replacement_urgency": str(replacement_urgency),
+        "application": str(application),
+        "required_certifications": list(required_certifications),
+        "include_compliance_summary": bool(include_compliance_summary),
+    }
 
 
 def _resolve_with_pydantic_agent(args: argparse.Namespace) -> dict[str, object]:
@@ -297,6 +377,136 @@ def _resolve_with_pydantic_agent(args: argparse.Namespace) -> dict[str, object]:
     if extracted is None:
         raise RuntimeError("Pydantic-AI run result did not include structured output")
     return _merge_with_cli_overrides(args, extracted)
+
+
+def _invalid_request_payload(*, reason: str, details: dict[str, object]) -> dict[str, object]:
+    return {
+        "error": "invalid_request",
+        "source": "prompt_extraction_sufficiency",
+        "reason": reason,
+        "details": details,
+    }
+
+
+def _lookup_sku_record(
+    sku: str,
+    compliance_db_path: Path,
+    suppliers_db_path: Path,
+) -> dict[str, object] | None:
+    if not sku:
+        return None
+
+    normalized_sku = sku.strip().upper()
+    with compliance_db_path.open("r", encoding="utf-8") as f:
+        compliance_payload = json.load(f)
+    if isinstance(compliance_payload, list):
+        for record in compliance_payload:
+            if not isinstance(record, dict):
+                continue
+            record_sku = str(record.get("sku", "")).strip().upper()
+            if record_sku == normalized_sku:
+                return record
+
+    with suppliers_db_path.open("r", encoding="utf-8") as f:
+        supplier_payload = json.load(f)
+    if isinstance(supplier_payload, list):
+        for supplier in supplier_payload:
+            if not isinstance(supplier, dict):
+                continue
+            contracts = supplier.get("contracts", [])
+            if not isinstance(contracts, list):
+                continue
+            for contract in contracts:
+                if not isinstance(contract, dict):
+                    continue
+                contract_sku = str(contract.get("sku", "")).strip().upper()
+                if contract_sku == normalized_sku:
+                    return {"sku": contract_sku, "tire_size": None}
+
+    return None
+
+
+def _resolve_request_or_error(
+    resolved_raw: dict[str, object],
+    args: argparse.Namespace,
+) -> tuple[ResolvedRequest | None, dict[str, object] | None]:
+    missing_critical_fields = [
+        field
+        for field in ["load_index", "speed_rating", "region_code"]
+        if resolved_raw.get(field) in (None, "")
+    ]
+    if missing_critical_fields:
+        return None, _invalid_request_payload(
+            reason="missing_critical_fields",
+            details={"missing_fields": missing_critical_fields},
+        )
+
+    sku = str(resolved_raw.get("sku") or "").strip().upper() or None
+    tire_size = str(resolved_raw.get("tire_size") or "").strip() or None
+    quantity_needed_raw = resolved_raw.get("quantity_needed")
+    quantity_needed = int(quantity_needed_raw) if quantity_needed_raw is not None else None
+
+    has_tire_and_quantity = bool(tire_size) and quantity_needed is not None
+    has_sku = bool(sku)
+
+    if not has_tire_and_quantity and not has_sku:
+        return None, _invalid_request_payload(
+            reason="missing_conditional_fields",
+            details={
+                "missing_fields": ["tire_size", "quantity_needed", "sku"],
+                "requirement": "provide tire_size and quantity_needed or provide sku",
+            },
+        )
+
+    sku_record = None
+    if has_sku:
+        sku_record = _lookup_sku_record(sku, args.compliance_db, args.suppliers_db)
+        if sku_record is None:
+            reason = "invalid_sku"
+            if not has_tire_and_quantity:
+                reason = "search_cannot_take_place_since_input_could_not_be_validated"
+            return None, _invalid_request_payload(
+                reason=reason,
+                details={
+                    "invalid_sku": sku,
+                    "missing_fields": [] if has_tire_and_quantity else ["tire_size", "quantity_needed"],
+                },
+            )
+
+    if not tire_size and sku_record is not None:
+        derived_tire_size = str(sku_record.get("tire_size") or "").strip() if isinstance(sku_record, dict) else ""
+        if derived_tire_size:
+            tire_size = derived_tire_size
+
+    if quantity_needed is None and has_sku:
+        # For explicit SKU lookups without quantity, use a minimal quantity probe.
+        quantity_needed = 1
+
+    if not tire_size or quantity_needed is None:
+        return None, _invalid_request_payload(
+            reason="search_cannot_take_place_since_input_could_not_be_validated",
+            details={
+                "missing_fields": [
+                    field
+                    for field, value in [("tire_size", tire_size), ("quantity_needed", quantity_needed)]
+                    if not value
+                ],
+            },
+        )
+
+    resolved = ResolvedRequest(
+        sku=sku,
+        tire_size=tire_size,
+        load_index=int(resolved_raw["load_index"]),
+        speed_rating=str(resolved_raw["speed_rating"]),
+        region_code=str(resolved_raw["region_code"]),
+        quantity_needed=quantity_needed,
+        replacement_urgency=str(resolved_raw.get("replacement_urgency") or "medium"),
+        application=str(resolved_raw.get("application") or "Regional delivery"),
+        required_certifications=list(resolved_raw.get("required_certifications") or ["US-DOT"]),
+        include_compliance_summary=bool(resolved_raw.get("include_compliance_summary", False)),
+    )
+    return resolved, None
 
 
 def _lead_time_for_urgency(urgency: str) -> int:
@@ -412,8 +622,12 @@ def parse_request_tool(args: argparse.Namespace, prompt: str) -> ParseRequestToo
     parse_request_tool(args, "Need 24 tires size 225/70R19.5 in TX")
     """
     args.prompt = prompt
-    resolved = _resolve_with_pydantic_agent(args)
-    return ParseRequestToolOutput(resolved_request=ResolvedRequest.model_validate(resolved))
+    resolved_raw = _resolve_with_pydantic_agent(args)
+    resolved, invalid_payload = _resolve_request_or_error(resolved_raw, args)
+    if invalid_payload is not None:
+        raise InvalidRequestError(invalid_payload)
+    assert resolved is not None
+    return ParseRequestToolOutput(resolved_request=resolved)
 
 
 def recommendation_ranking_tool(
@@ -456,20 +670,28 @@ def recommendation_ranking_tool(
         application=request.application,
     )
 
-    response = task3.search_inventory(
-        args.compliance_db,
-        args.suppliers_db,
-        search_request,
-        policy_version=args.policy_version,
-    )
+    try:
+        response = task3.search_inventory(
+            args.compliance_db,
+            args.suppliers_db,
+            search_request,
+            policy_version=args.policy_version,
+        )
+    except ValidationError as exc:
+        raise SchemaValidationError("task3_processing", exc.errors()) from exc
+
+    try:
+        validated_response = SEARCH_RESPONSE_ADAPTER.validate_python(response).model_dump(exclude_none=True)
+    except ValidationError as exc:
+        raise SchemaValidationError("task3_response_schema", exc.errors()) from exc
 
     ranking_output = RecommendationRankingToolOutput(
-        status=str(response.get("status", "no_match")),
-        result_count=len(response.get("results", [])) if isinstance(response.get("results"), list) else 0,
-        top_sku=(response.get("results", [{}])[0].get("sku") if response.get("results") else None),
-        traceability_refs=[str(item) for item in response.get("traceability_refs", [])],
+        status=str(validated_response.get("status", "no_match")),
+        result_count=len(validated_response.get("results", [])) if isinstance(validated_response.get("results"), list) else 0,
+        top_sku=(validated_response.get("results", [{}])[0].get("sku") if validated_response.get("results") else None),
+        traceability_refs=[str(item) for item in validated_response.get("traceability_refs", [])],
     )
-    return response, ranking_output
+    return validated_response, ranking_output
 
 
 def compliance_precheck_tool(input_model: CompliancePrecheckToolInput) -> CompliancePrecheckToolOutput:
@@ -629,6 +851,41 @@ def _build_error_response(
     return payload
 
 
+def _build_invalid_request_response(
+    *,
+    run_id: str,
+    records: list[ToolCallRecord],
+    payload: dict[str, object],
+    include_trajectory: bool = False,
+) -> dict[str, object]:
+    response = {
+        **payload,
+        "run_id": run_id,
+    }
+    if include_trajectory:
+        response["trajectory"] = TrajectoryLog(run_id=run_id, records=records).model_dump()
+    return response
+
+
+def _build_schema_validation_error_response(
+    *,
+    run_id: str,
+    records: list[ToolCallRecord],
+    source: str,
+    details: object,
+    include_trajectory: bool = False,
+) -> dict[str, object]:
+    response: dict[str, object] = {
+        "error": "schema_validation_error",
+        "source": source,
+        "details": details,
+        "run_id": run_id,
+    }
+    if include_trajectory:
+        response["trajectory"] = TrajectoryLog(run_id=run_id, records=records).model_dump()
+    return response
+
+
 def _process_prompt(
     args: argparse.Namespace,
     task3: object,
@@ -694,6 +951,32 @@ def _process_prompt(
             region_code=parse_output.resolved_request.region_code,
             quantity_needed=parse_output.resolved_request.quantity_needed,
         )
+    except InvalidRequestError as exc:
+        records[-1] = _finish_record(records[-1], status="failed", error=str(exc.payload.get("reason", "invalid_request")))
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+        _console_tool_log(
+            event="tool_failed",
+            source=source,
+            run_id=run_id,
+            tool_name="parse_request_tool",
+            elapsed_ms=round((time.perf_counter() - parse_started) * 1000, 2),
+            error="invalid_request",
+            reason=exc.payload.get("reason"),
+        )
+        _console_log(
+            "interaction_validation_error",
+            source=source,
+            run_id=run_id,
+            elapsed_ms=elapsed_ms,
+            phase="prompt_extraction_sufficiency",
+            reason=exc.payload.get("reason"),
+        )
+        return 2, _build_invalid_request_response(
+            run_id=run_id,
+            records=records,
+            payload=exc.payload,
+            include_trajectory=include_trajectory,
+        )
     except ValidationError as exc:
         records[-1] = _finish_record(records[-1], status="failed", error="request validation failed")
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
@@ -749,6 +1032,32 @@ def _process_prompt(
     _console_tool_log(event="tool_started", source=source, run_id=run_id, tool_name="recommendation_ranking_tool")
     try:
         response, ranking_output = recommendation_ranking_tool(task3, args, parse_output.resolved_request)
+    except SchemaValidationError as exc:
+        records[-1] = _finish_record(records[-1], status="failed", error="schema validation")
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+        _console_tool_log(
+            event="tool_failed",
+            source=source,
+            run_id=run_id,
+            tool_name="recommendation_ranking_tool",
+            elapsed_ms=round((time.perf_counter() - ranking_started) * 1000, 2),
+            error="schema_validation_error",
+            schema_source=exc.source,
+        )
+        _console_log(
+            "interaction_schema_validation_error",
+            source=source,
+            run_id=run_id,
+            elapsed_ms=elapsed_ms,
+            phase=exc.source,
+        )
+        return 2, _build_schema_validation_error_response(
+            run_id=run_id,
+            records=records,
+            source=exc.source,
+            details=exc.details,
+            include_trajectory=include_trajectory,
+        )
     except ValidationError as exc:
         records[-1] = _finish_record(records[-1], status="failed", error="ranking validation failed")
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
